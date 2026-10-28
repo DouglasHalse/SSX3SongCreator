@@ -127,3 +127,52 @@ test('the dump reads like the shipped maps', function () {
     assert.match(text, /2: return to register 1/);
     assert.match(text, /10: go to node \d+/);
 });
+
+/* ---- tempo detection ---------------------------------------------------- */
+
+function clicks(bpm, seconds, rate, firstAt) {
+    var n = Math.floor(seconds * rate), d = new Float32Array(n), beat = 60 / bpm;
+    for (var t = firstAt || 0; t < seconds; t += beat) {
+        var s = Math.floor(t * rate);
+        for (var i = 0; i < Math.floor(rate * 0.06) && s + i < n; i++) {
+            var e = Math.exp(-i / (rate * 0.012));
+            d[s + i] += (Math.sin(2 * Math.PI * 80 * i / rate) * 0.8 + (Math.random() * 2 - 1) * 0.5) * e;
+        }
+    }
+    return d;
+}
+
+test('finds the tempo of a click track', function () {
+    [92, 120, 128].forEach(function (bpm) {
+        var r = E.detectTempo([clicks(bpm, 24, 44100)], 44100);
+        assert.ok(r, 'detected something at ' + bpm);
+        assert.ok(Math.abs(r.bpm - bpm) < 1, bpm + ' came back as ' + r.bpm.toFixed(1));
+    });
+});
+
+test('an octave is reported as one or the other, never as a wrong tempo', function () {
+    var r = E.detectTempo([clicks(174, 24, 44100)], 44100);
+    assert.ok(r);
+    var near = Math.abs(r.bpm - 174) < 2 || Math.abs(r.bpm * 2 - 174) < 2;
+    assert.ok(near, '174 came back as ' + r.bpm.toFixed(1));
+});
+
+test('the first beat becomes the bar offset', function () {
+    var r = E.detectTempo([clicks(120, 24, 44100, 0.25)], 44100);
+    assert.ok(r);
+    var off = r.offset;
+    var err = Math.min(Math.abs(off - 0.25), Math.abs(off - 0.25 + r.beat), Math.abs(off - 0.25 - r.beat));
+    assert.ok(err < 0.04, 'offset came back as ' + off.toFixed(3));
+});
+
+test('material with no onsets has no tempo', function () {
+    var pad = new Float32Array(44100 * 8);
+    for (var i = 0; i < pad.length; i++) {
+        pad[i] = (Math.sin(2 * Math.PI * 110 * i / 44100) + Math.sin(2 * Math.PI * 220 * i / 44100)) * 0.2;
+    }
+    assert.strictEqual(E.detectTempo([pad], 44100), null);
+});
+
+test('too little audio is refused', function () {
+    assert.strictEqual(E.detectTempo([clicks(120, 1, 44100)], 44100), null);
+});

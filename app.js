@@ -52,6 +52,20 @@
         return S.ctx;
     }
 
+    function note(text) { $('tempo').textContent = text; }
+
+    function detectTempo() {
+        if (!S.buffer) return null;
+        var chans = [];
+        try {
+            for (var c = 0; c < Math.min(2, S.buffer.numberOfChannels); c++)
+                chans.push(S.buffer.getChannelData(c));
+            return E.detectTempo(chans, S.buffer.sampleRate);
+        } catch (err) {
+            return null;
+        }
+    }
+
     function setAudio(buffer, name) {
         S.buffer = buffer;
         S.name = name;
@@ -59,6 +73,15 @@
         $('srcname').textContent = name + '  (' + buffer.duration.toFixed(1) + ' s, ' +
             buffer.numberOfChannels + ' ch, ' + buffer.sampleRate + ' Hz)';
         stop();
+        var det = detectTempo();
+        if (det && det.confidence >= 0.15) {
+            $('bpm').value = det.bpm.toFixed(2);
+            $('offset').value = det.offset.toFixed(3);
+            note('detected ' + det.bpm.toFixed(1) + ' BPM (' + Math.round(det.confidence * 100) +
+                '%) — ×2 / ÷2 if that is half or double');
+        } else {
+            note('no tempo in this audio — set BPM by hand');
+        }
         rebuild();
     }
 
@@ -113,18 +136,41 @@
 
     /* Tempo or the source changed: re-cut the file and keep the markings that
      * still land inside the song. */
+    function indexAt(t) {
+        for (var i = 0; i < S.measures.length; i++)
+            if (t >= S.measures[i].start && t < S.measures[i].end) return i;
+        return -1;
+    }
+
+    /* Re-cut the audio for new tempo settings. Markings are carried over by the
+     * time they sit at, so changing BPM (or its octave) keeps them on the same
+     * music instead of on the same bar number. */
     function rebuild() {
+        var sides = [], zones = [], finishAt = null, i;
+        for (i = 0; i < S.roles.length; i++)
+            if (S.roles[i] === 'side' && S.measures[i]) sides.push(S.measures[i].start);
+        S.zones.forEach(function (z) {
+            if (!S.measures[z.from] || !S.measures[z.to]) return;
+            zones.push({ event: z.event, from: S.measures[z.from].start, to: S.measures[z.to].end, name: z.name });
+        });
+        if (S.finishFrom !== null && S.measures[S.finishFrom]) finishAt = S.measures[S.finishFrom].start;
+
         readInputs();
         var dur = S.buffer ? S.buffer.duration : 0;
         S.measures = dur > 0 ? E.measures({ bpm: S.bpm, beatsPerMeasure: S.beats, duration: dur, offset: S.offset }) : [];
-        var roles = [];
-        for (var i = 0; i < S.measures.length; i++) roles.push(S.roles[i] || 'normal');
-        S.roles = roles;
-        S.zones = S.zones.filter(function (z) { return z.to < S.measures.length; });
-        if (S.finishFrom !== null && S.finishFrom >= S.measures.length) S.finishFrom = null;
-        if (S.sel) {
-            S.sel = null;
-        }
+
+        S.roles = S.measures.map(function () { return 'normal'; });
+        sides.forEach(function (t) {
+            var at = indexAt(t);
+            if (at >= 0) S.roles[at] = 'side';
+        });
+
+        S.zones = zones.map(function (z) {
+            return { event: z.event, from: indexAt(z.from), to: indexAt(z.to - 1e-6), name: z.name };
+        }).filter(function (z) { return z.from >= 0 && z.to >= z.from; });
+
+        S.finishFrom = (finishAt !== null && indexAt(finishAt) >= 0) ? indexAt(finishAt) : null;
+        S.sel = null;
         cacheMap();
         renderAll();
     }
@@ -560,12 +606,22 @@
     };
     $('demo').onclick = function () { loadDemo(); };
     ['bpm', 'beats', 'offset', 'ramp'].forEach(function (id) {
-        $(id).onchange = function () { rebuild(); };
-        $(id).oninput = function () { rebuild(); };
+        $(id).onchange = function () { if (id !== 'beats' && id !== 'ramp') note(''); rebuild(); };
+        $(id).oninput = function () { if (id !== 'beats' && id !== 'ramp') note(''); rebuild(); };
     });
     ['title', 'artist'].forEach(function (id) {
         $(id).oninput = function () { if (S.map) cacheMap(); };
     });
+    $('twice').onclick = function () {
+        $('bpm').value = (num('bpm', 92) * 2).toFixed(2);
+        note('octave changed — the markings stayed on the same music, not the same bar number');
+        rebuild();
+    };
+    $('half').onclick = function () {
+        $('bpm').value = (num('bpm', 92) / 2).toFixed(2);
+        note('octave changed — the markings stayed on the same music, not the same bar number');
+        rebuild();
+    };
     $('play').onclick = function () { play(); };
     $('stop').onclick = function () { stop(); };
     Array.prototype.forEach.call(document.querySelectorAll('#eventbtns button[data-ev]'), function (b) {

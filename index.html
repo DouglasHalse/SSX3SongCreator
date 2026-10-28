@@ -16,7 +16,10 @@
     <span id="srcname" class="muted">no audio loaded</span>
   </div>
   <div class="fields">
-    <label>BPM <input id="bpm" type="number" value="92" min="40" max="300" step="0.01"></label>
+    <label>BPM <input id="bpm" type="number" value="92" min="40" max="300" step="0.01">
+      <button id="twice" class="tiny" title="double the tempo">×2</button>
+      <button id="half" class="tiny" title="halve the tempo">÷2</button>
+    </label>
     <label>Beats/measure <input id="beats" type="number" value="4" min="1" max="16" step="1"></label>
     <label>Offset <input id="offset" type="number" value="0" min="0" step="0.005"></label>
     <label>Ramp
@@ -28,6 +31,7 @@
     </label>
     <label>Title <input id="title" type="text" value="Untitled" size="14"></label>
     <label>Artist <input id="artist" type="text" value="" size="14"></label>
+    <span id="tempo" class="small"></span>
   </div>
 </header>
 

@@ -17,7 +17,8 @@ Open [`index.html`](index.html) in a browser. No build step, no dependencies, an
 leaves the page.
 
 1. **Load audio** (whatever the browser decodes) or press **Demo loop** to try it with no file.
-2. Set **BPM**, **Beats/measure** and **Offset** so the cut lands on the audio's own bars.
+2. The tempo is detected on load (and the first beat becomes the offset); **×2** / **÷2** if it
+   lands an octave off, and **Beats/measure** if the song is not in 4.
 3. Click a measure to mark it **side material** — heard only at the top of the control value, as
    the game's own songs do. Click again to clear it.
 4. Drag a range, then **Zone from selection** (a course music zone, entered by event *N* and left
@@ -30,7 +31,7 @@ leaves the page.
 
 ## Status
 
-- **Done**: measures cut on the beat grid, side material, zones with call/return, the finish
+- **Done**: tempo detection, measures cut on the beat grid, side material, zones with call/return, the finish
   section, a simulation of the game's music director, and both exports.
 - **Next**: the packers — `.mpf` writer, `.mus` muxer (the stream format also carries 16-bit PCM,
   which would avoid an ADPCM encoder for a first version), loop-bank writer, and the installer

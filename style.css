@@ -172,6 +172,7 @@ footer {
 .chip.zone { background: rgba(111,179,255,.45); }
 .chip.finish { background: rgba(106,212,139,.45); }
 .small { color: var(--muted); font-size: 12px; margin: 0 0 6px; max-width: 60ch; }
+button.tiny { padding: 1px 6px; font-size: 11px; }
 
 h1 { white-space: nowrap; }
 

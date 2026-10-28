@@ -11,8 +11,12 @@ the audio never leaves the page.
 
 1. **Load audio** (WAV, MP3, OGG, FLAC — whatever the browser decodes) or press
    **Demo loop** to work without a file.
-2. Set **BPM** to the audio's tempo, **Beats/measure** (4 unless the song is in
-   something else) and **Offset** to move the cut to the first downbeat.
+2. **BPM is detected** on load — onset envelope, autocorrelation with a preference for common
+   tempos — and written into the field with its confidence, with the first beat as **Offset**.
+   Material with no onsets (a pad, a sustained tone) reports no tempo rather than inventing one.
+   If the answer is half or double the truth, **×2** / **÷2**: the markings follow the music, not
+   the bar number, so nothing is lost. **Beats/measure** is 4 unless the song is in something else.
+   The status panel shows the measure length, so a wrong tempo is visible at once.
 3. Click a measure to mark it as **side material**: it is heard only at the top
    of the control value, as the game's own songs do. Click again to clear it.
 4. Drag across measures, then:
