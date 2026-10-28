@@ -47,8 +47,15 @@
 
 <section id="wavebox">
   <canvas id="wave"></canvas>
-  <p id="hint" class="muted">Click a bar to make it side material · drag across bars, then press
-    <b>Course zone from selection</b> or <b>Finish from selection</b></p>
+  <div id="selbar" hidden>
+    <span class="muted">make it</span>
+    <button data-type="side">side material</button>
+    <button data-type="zone">course zone</button>
+    <button data-type="finish">finish</button>
+    <button data-type="clear">clear</button>
+  </div>
+  <p id="hint" class="muted">Drag the strip along the top to scrub · drag across bars, then pick a type ·
+    click a bar to toggle side material · click a zone to select it</p>
 </section>
 
 <main>
@@ -57,10 +64,6 @@
     <p class="small">Ride into one during a run and the song jumps to that section; ride out and it
       goes back to where it was.</p>
     <ul id="zones" class="list"></ul>
-    <div class="row">
-      <button id="addzone">Course zone from selection</button>
-      <button id="setfinish">Finish from selection</button>
-    </div>
     <h2>Finish</h2>
     <p id="finishinfo" class="muted">not set — the song loops for ever</p>
   </section>

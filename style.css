@@ -76,6 +76,27 @@ input[type=text] { width: 120px; }
 .fields label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .src { display: flex; gap: 8px; align-items: center; }
 
+#wavebox { position: relative; }
+
+#selbar {
+  position: absolute;
+  left: 0;
+  top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #0f141b;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  font-size: 12px;
+  z-index: 2;
+}
+#selbar[hidden] { display: none; }
+#selbar button { padding: 3px 9px; font-size: 12px; }
+#selbar button.on { border-color: var(--accent); color: #fff; background: #1b2735; }
+
 #wavebox { padding: 10px 16px 0; }
 #wave {
   width: 100%;

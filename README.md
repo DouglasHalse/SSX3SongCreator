@@ -19,10 +19,12 @@ leaves the page.
 1. **Load audio** (whatever the browser decodes) or press **Demo loop** to try it with no file.
 2. The tempo is detected on load (and the first beat becomes the offset); **×2** / **÷2** if it
    lands an octave off, and **Beats/measure** if the song is not in 4.
-3. Click a measure to mark it **side material** — heard only at the top of the control value, as
-   the game's own songs do. Click again to clear it.
-4. Drag a range, then **Zone from selection** (a course music zone, entered by event *N* and left
-   by *N+1*) or **Finish from selection** (from there the song plays once and ends).
+3. Drag across bars to select a section; the chips under it set what it is — **side material**
+   (only at the top of the control value), **course zone** (entered by event *N*, left by *N+1*),
+   **finish**, or **clear**. Click an existing zone to select it and retype it in place; click a
+   single bar to toggle side material.
+4. Drag the strip along the top of the waveform to scrub: the file plays under your finger, so you
+   can find the beat by ear.
 5. **Play** runs it through the game's director: the value ramps over 13, 17 or 20 s, every
    measure end takes a branch, and the event buttons jump — `load` (36), `finish` (10),
    `fade out` (19), each zone's enter/leave. **demo sequence** fires all of it on a timer.

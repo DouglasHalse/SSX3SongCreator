@@ -27,8 +27,16 @@
         sources: [],
         current: -1,
         demo: [],
-        drawQueued: false
+        drawQueued: false,
+        playhead: 0,
+        selZone: null,
+        scrubbing: false,
+        lastScrub: 0
     };
+
+    /* the top strip of the canvas is the ruler: drag it to scrub, the body below
+     * it is for marking sections */
+    var RULER_H = 20;
 
     /* ------------------------------------------------------------- inputs */
 
@@ -213,7 +221,9 @@
 
         var dur = S.buffer.duration;
         var xOf = function (t) { return (t / dur) * w; };
-        var mid = h * 0.46;
+        var waveH = h - RULER_H;
+        var mid = RULER_H + waveH * 0.46;
+        var amp = waveH * 0.46 * 0.92;
 
         /* waveform */
         g.fillStyle = '#243040';
@@ -221,7 +231,7 @@
         for (var i = 0; i < n; i++) {
             var x = (i / n) * w;
             var lo = S.peaks[i * 2], hi = S.peaks[i * 2 + 1];
-            g.fillRect(x, mid - hi * mid * 0.92, Math.max(1, w / n), Math.max(1, (hi - lo) * mid * 0.92));
+            g.fillRect(x, mid - hi * amp, Math.max(1, w / n), Math.max(1, (hi - lo) * amp));
         }
 
         /* zones and finish, behind the measure grid */
@@ -272,21 +282,44 @@
             g.stroke();
         }
 
-        /* current measure + playhead */
+        /* the measure being played */
         if (S.current >= 0 && S.measures[S.current] && S.playing) {
             var m = S.measures[S.current];
             g.fillStyle = 'rgba(111,179,255,.18)';
             g.fillRect(xOf(m.start), 0, xOf(m.end) - xOf(m.start), h);
         }
-        if (S.playing) {
-            var t = Math.max(0, S.ctx.currentTime - S.t0);
-            var x = xOf(Math.min(t, dur));
-            g.strokeStyle = '#ffffff';
-            g.beginPath();
-            g.moveTo(x, 0);
-            g.lineTo(x, h);
-            g.stroke();
+
+        /* ruler, drawn last so it stays legible over the waveform */
+        g.fillStyle = '#0b0f14';
+        g.fillRect(0, 0, w, RULER_H);
+        g.strokeStyle = '#2b323d';
+        g.beginPath();
+        g.moveTo(0, RULER_H + 0.5);
+        g.lineTo(w, RULER_H + 0.5);
+        g.stroke();
+        g.fillStyle = '#6b7787';
+        g.font = '10px ui-monospace, monospace';
+        var stepSec = dur > 150 ? 30 : dur > 60 ? 10 : 5;
+        for (var ts = 0; ts <= dur; ts += stepSec) {
+            var tx = xOf(ts);
+            g.fillRect(tx, RULER_H - 5, 1, 5);
+            g.fillText(fmt(ts), Math.min(tx + 3, w - 34), 11);
         }
+
+        /* playhead */
+        var ph = playbackPos();
+        var px = xOf(Math.min(Math.max(0, ph), dur));
+        g.strokeStyle = S.playing ? '#ffffff' : '#8fa6bf';
+        g.beginPath();
+        g.moveTo(px, 0);
+        g.lineTo(px, h);
+        g.stroke();
+        g.fillStyle = g.strokeStyle;
+        g.beginPath();
+        g.moveTo(px - 4, 0);
+        g.lineTo(px + 4, 0);
+        g.lineTo(px, 7);
+        g.fill();
     }
 
     /* ------------------------------------------------------------ the rest */
@@ -296,7 +329,7 @@
         ul.innerHTML = '';
         if (!S.zones.length) {
             var li = document.createElement('li');
-            li.innerHTML = '<span class="muted">none yet — drag across bars, then press “Course zone from selection”</span>';
+            li.innerHTML = '<span class="muted">none yet — drag across bars, then pick “course zone”</span>';
             ul.appendChild(li);
         }
         S.zones.forEach(function (z, i) {
@@ -372,6 +405,7 @@
     function renderAll() {
         renderZones();
         renderCheck();
+        renderSel();
         queueDraw();
     }
 
@@ -392,64 +426,167 @@
         return S.measures.length - 1;
     }
 
+    function zoneAt(idx) {
+        for (var i = 0; i < S.zones.length; i++)
+            if (idx >= S.zones[i].from && idx <= S.zones[i].to) return i;
+        return -1;
+    }
+
     var drag = null;
 
     $('wave').addEventListener('pointerdown', function (ev) {
         if (!S.buffer || !S.measures.length) return;
         var rect = $('wave').getBoundingClientRect();
-        var idx = measureAt(ev.clientX - rect.left);
-        if (ev.shiftKey && S.sel) {
+        var x = ev.clientX - rect.left;
+
+        if (ev.clientY - rect.top <= RULER_H) {
+            S.scrubbing = true;
+            try { $('wave').setPointerCapture(ev.pointerId); } catch (e) { /* no capture */ }
+            stop();
+            scrubTo((x / rect.width) * S.buffer.duration);
+            return;
+        }
+
+        var idx = measureAt(x);
+        var zi = zoneAt(idx);
+        if (zi >= 0 && !ev.shiftKey) {
+            S.sel = { a: S.zones[zi].from, b: S.zones[zi].to };
+            S.selZone = zi;
+            drag = { start: S.sel.a, moved: true, x: ev.clientX };
+        } else if (ev.shiftKey && S.sel) {
             S.sel = { a: Math.min(S.sel.a, idx), b: Math.max(S.sel.a, idx) };
-            drag = { start: S.sel.a, moved: true };
+            drag = { start: S.sel.a, moved: true, x: ev.clientX };
         } else {
             S.sel = { a: idx, b: idx };
+            S.selZone = null;
             drag = { start: idx, moved: false, x: ev.clientX };
         }
+        renderSel();
         queueDraw();
     });
 
     $('wave').addEventListener('pointermove', function (ev) {
-        if (!drag) return;
         var rect = $('wave').getBoundingClientRect();
-        var idx = measureAt(ev.clientX - rect.left);
+        var x = ev.clientX - rect.left;
+        if (S.scrubbing) {
+            scrubTo((x / rect.width) * S.buffer.duration);
+            return;
+        }
+        $('wave').style.cursor = (ev.clientY - rect.top <= RULER_H) ? 'ew-resize' : 'default';
+        if (!drag || !S.buffer) return;
+        var idx = measureAt(x);
         if (Math.abs(ev.clientX - drag.x) > 3) drag.moved = true;
         S.sel = { a: Math.min(drag.start, idx), b: Math.max(drag.start, idx) };
+        S.selZone = null;
+        renderSel();
         queueDraw();
     });
 
     $('wave').addEventListener('pointerup', function (ev) {
+        if (S.scrubbing) {
+            S.scrubbing = false;
+            try { $('wave').releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
+            return;
+        }
         if (!drag || !S.buffer) { drag = null; return; }
         var rect = $('wave').getBoundingClientRect();
         var idx = measureAt(ev.clientX - rect.left);
         if (!drag.moved) {
             S.roles[idx] = S.roles[idx] === 'side' ? 'normal' : 'side';
             S.sel = null;
+            S.selZone = null;
             cacheMap();
             renderAll();
         } else {
             S.sel = { a: Math.min(drag.start, idx), b: Math.max(drag.start, idx) };
+            renderSel();
             queueDraw();
         }
         drag = null;
     });
 
-    $('addzone').onclick = function () {
-        if (!S.sel) return;
-        var n = nextEventNumber();
-        if (n === null) return;
-        S.zones.push({ event: n, from: S.sel.a, to: S.sel.b, name: 'zone ' + n });
-        S.zones.sort(function (a, b) { return a.from - b.from; });
-        S.sel = null;
-        cacheMap();
-        renderAll();
-    };
+    /* The chips under a selection: whatever the range is now, make it this. */
+    function applyType(kind) {
+        if (!S.sel || !S.measures.length) return;
+        var a = S.sel.a, b = S.sel.b, i;
+        var keepEvent = (S.selZone !== null && S.zones[S.selZone]) ? S.zones[S.selZone].event : null;
 
-    $('setfinish').onclick = function () {
-        if (!S.sel) return;
-        S.finishFrom = S.sel.a;
+        for (i = a; i <= b; i++) if (S.roles[i]) S.roles[i] = 'normal';
+        S.zones = S.zones.filter(function (z) { return z.to < a || z.from > b; });
+        if (S.finishFrom !== null && S.finishFrom >= a && S.finishFrom <= b) S.finishFrom = null;
+
+        if (kind === 'side') {
+            for (i = a; i <= b; i++) S.roles[i] = 'side';
+        } else if (kind === 'zone') {
+            var n = keepEvent !== null ? keepEvent : nextEventNumber();
+            if (n === null) return;
+            S.zones.push({ event: n, from: a, to: b, name: 'zone ' + n });
+            S.zones.sort(function (x, y) { return x.from - y.from; });
+        } else if (kind === 'finish') {
+            S.finishFrom = a;
+        }
+
+        S.sel = null;
+        S.selZone = null;
         cacheMap();
         renderAll();
-    };
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('#selbar button[data-type]'), function (b) {
+        b.onclick = function () { applyType(b.dataset.type); };
+    });
+
+    /* Keeps the chips against the selection they act on, and marks which type
+     * the range already has. */
+    function renderSel() {
+        var bar = $('selbar');
+        if (!S.sel || !S.measures.length || !S.buffer) { bar.hidden = true; return; }
+        var a = S.measures[S.sel.a], b = S.measures[S.sel.b];
+        var box = $('wavebox').getBoundingClientRect();
+        var c = $('wave').getBoundingClientRect();
+        if (!a || !b) { bar.hidden = true; return; }
+
+        bar.hidden = false;
+        var x0 = (c.left - box.left) + (a.start / S.buffer.duration) * c.width;
+        var x1 = (c.left - box.left) + (b.end / S.buffer.duration) * c.width;
+        var want = (x0 + x1) / 2 - bar.offsetWidth / 2;
+        bar.style.left = Math.max(6, Math.min(box.width - bar.offsetWidth - 6, want)) + 'px';
+
+        var kind = S.selZone !== null ? 'zone' : null;
+        if (!kind) {
+            for (var i = S.sel.a; i <= S.sel.b; i++) if (S.roles[i] === 'side') { kind = 'side'; break; }
+        }
+        if (!kind && S.finishFrom !== null && S.finishFrom >= S.sel.a && S.finishFrom <= S.sel.b) kind = 'finish';
+        Array.prototype.forEach.call(bar.querySelectorAll('button[data-type]'), function (btn) {
+            btn.classList.toggle('on', btn.dataset.type === kind);
+        });
+    }
+
+    /* Scrubbing: short bursts of the file at the playhead, because the thing you
+     * are listening for is the beat, not the arrangement. */
+    function scrubTo(t) {
+        if (!S.buffer) return;
+        S.playhead = Math.max(0, Math.min(S.buffer.duration, t));
+        queueDraw();
+        if (!S.audioLive || !S.ctx) return;
+        var now = S.ctx.currentTime;
+        if (now - S.lastScrub < 0.07) return;
+        S.lastScrub = now;
+        audition();
+    }
+
+    function audition() {
+        var src = S.ctx.createBufferSource();
+        src.buffer = S.buffer;
+        var gain = S.ctx.createGain();
+        gain.gain.value = 0.85;
+        src.connect(gain);
+        gain.connect(S.ctx.destination);
+        src.start(0, S.playhead, 0.14);
+        src.onended = function () {
+            try { src.disconnect(); gain.disconnect(); } catch (e) { /* gone */ }
+        };
+    }
 
     function nextEventNumber() {
         var used = {};
@@ -465,6 +602,15 @@
 
     function clock() {
         return S.audioLive ? S.ctx.currentTime : performance.now() / 1000;
+    }
+
+    /* Where the playhead is: the arrangement while it plays, otherwise wherever
+     * the last scrub left it. */
+    function playbackPos() {
+        if (!S.playing) return S.playhead;
+        var t = clock() - S.t0;
+        if (t >= 0) S.playhead = Math.min(t, S.buffer ? S.buffer.duration : t);
+        return S.playhead;
     }
 
     function playSlice(offset, duration, when) {
@@ -505,6 +651,10 @@
         S.t0 = clock() + 0.06;
         S.nextAt = S.t0;
         S.current = -1;
+        S.playhead = 0;
+        S.sel = null;
+        S.selZone = null;
+        renderSel();
         S.demo = $('autodemo').checked ? demoSchedule() : [];
         S.timer = setInterval(tick, 25);
         $('play').classList.add('primary');
