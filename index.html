@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSX3SongCreator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>SSX3<em>SongCreator</em></h1>
+  <div class="src">
+    <label class="btn">Load audio<input id="file" type="file" accept="audio/*" hidden></label>
+    <button id="demo" class="btn">Demo loop</button>
+    <span id="srcname" class="muted">no audio loaded</span>
+  </div>
+  <div class="fields">
+    <label>BPM <input id="bpm" type="number" value="92" min="40" max="300" step="0.01"></label>
+    <label>Beats/measure <input id="beats" type="number" value="4" min="1" max="16" step="1"></label>
+    <label>Offset <input id="offset" type="number" value="0" min="0" step="0.005"></label>
+    <label>Ramp
+      <select id="ramp">
+        <option value="13">13 s</option>
+        <option value="17" selected>17 s</option>
+        <option value="20">20 s</option>
+      </select>
+    </label>
+    <label>Title <input id="title" type="text" value="Untitled" size="14"></label>
+    <label>Artist <input id="artist" type="text" value="" size="14"></label>
+  </div>
+</header>
+
+<section id="wavebox">
+  <canvas id="wave"></canvas>
+  <p id="hint" class="muted">Click a measure to mark it as side material. Drag to select measures, then mark a zone or the finish.</p>
+</section>
+
+<main>
+  <section>
+    <h2>Zones</h2>
+    <ul id="zones" class="list"></ul>
+    <div class="row">
+      <button id="addzone">Zone from selection</button>
+      <button id="setfinish">Finish from selection</button>
+    </div>
+    <h2>Finish</h2>
+    <p id="finishinfo" class="muted">not set — the song loops for ever</p>
+  </section>
+
+  <section>
+    <h2>Check</h2>
+    <ul id="check" class="list"></ul>
+    <h2>Song</h2>
+    <dl id="stats"></dl>
+  </section>
+</main>
+
+<footer>
+  <div class="transport">
+    <button id="play">Play</button>
+    <button id="stop">Stop</button>
+    <label class="muted"><input id="autoramp" type="checkbox" checked> ramp</label>
+    <label class="muted"><input id="autodemo" type="checkbox"> demo sequence</label>
+    <div id="value" title="control value the game sends"><div id="valuebar"></div><span id="valuetext">0</span></div>
+  </div>
+
+  <div id="now" class="muted">stopped</div>
+
+  <div class="events" id="eventbtns">
+    <span class="muted">events:</span>
+    <button data-ev="36">load</button>
+    <button data-ev="10">finish</button>
+    <button data-ev="19">fade out</button>
+    <span id="zonebtns"></span>
+  </div>
+
+  <div class="export">
+    <button id="exportjson">Export song.json</button>
+    <button id="exportmap">Export map</button>
+  </div>
+</footer>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
