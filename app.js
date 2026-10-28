@@ -34,6 +34,9 @@
         lastScrub: 0,
         master: null,
         partial: null,
+        slice: null,
+        lastDraw: 0,
+        drawTimer: null,
         volume: 0.4,
         volumeChosen: false
     };
@@ -238,10 +241,19 @@
 
     /* ------------------------------------------------------------- drawing */
 
+    /* An animation frame is throttled in background and headless windows, and a
+     * canvas resize clears it: a timer fallback keeps the track painted. */
     function queueDraw() {
         if (S.drawQueued) return;
         S.drawQueued = true;
-        requestAnimationFrame(function () { S.drawQueued = false; draw(); });
+        var run = function () {
+            if (!S.drawQueued) return;
+            S.drawQueued = false;
+            if (S.drawTimer) { clearTimeout(S.drawTimer); S.drawTimer = null; }
+            draw();
+        };
+        S.drawTimer = setTimeout(run, 60);
+        requestAnimationFrame(run);
     }
 
     function draw() {
@@ -366,6 +378,7 @@
         g.lineTo(px + 4, 0);
         g.lineTo(px, 7);
         g.fill();
+        S.lastDraw = clock();
     }
 
     /* ------------------------------------------------------------ the rest */
@@ -375,7 +388,7 @@
         ul.innerHTML = '';
         if (!S.zones.length) {
             var li = document.createElement('li');
-            li.innerHTML = '<span class="muted">none yet — drag across bars, then pick “course zone”</span>';
+            li.innerHTML = '<span class="muted">none yet — ctrl-drag across bars, then pick “course zone”</span>';
             ul.appendChild(li);
         }
         S.zones.forEach(function (z, i) {
@@ -399,21 +412,50 @@
 
         /* By number, not by position: the numbers are identities handed out as
          * zones are made, so the order in the song can look jumbled here. */
-        var zb = $('zonebtns');
-        zb.innerHTML = '';
-        S.zones.slice().sort(function (a, b) { return a.event - b.event; }).forEach(function (z) {
-            var inBtn = document.createElement('button');
-            inBtn.textContent = 'zone ' + z.event + ' · bars ' + z.from + '–' + z.to;
-            inBtn.title = 'event ' + z.event + ': the rider enters the area — the song stores its place and jumps here';
-            inBtn.onclick = function () { fire(z.event); };
-            var outBtn = document.createElement('button');
-            outBtn.textContent = 'leave ' + z.event + ' · event ' + (z.event + 1);
-            outBtn.title = 'event ' + (z.event + 1) + ': the rider leaves — the song returns to where it was';
-            outBtn.onclick = function () { fire(z.event + 1); };
-            zb.appendChild(inBtn);
-            zb.appendChild(outBtn);
-        });
     }
+
+    /* The events, laid out under the track where they fire, so what each one does
+     * is visible from where it sits: load at the start, a zone's entry on its
+     * first bar and its leave on its last, finish on the finish bar, fade at the
+     * end. Two rows, because two markers near each other would collide. */
+    function renderEvents() {
+        var lane = $('eventlane');
+        if (!lane) return;
+        lane.innerHTML = '';
+        if (!S.buffer || !S.measures.length) { lane.style.height = '0px'; return; }
+
+        var dur = S.buffer.duration;
+        var items = [{ t: 0, kind: 'load', text: 'load', sub: 'starts the track', ev: E.EVENT.LOAD }];
+        S.zones.forEach(function (z) {
+            var a = S.measures[z.from], b = S.measures[z.to];
+            if (!a || !b) return;
+            items.push({ t: a.start, kind: 'zone', text: 'zone ' + z.event, sub: 'jumps in', ev: z.event });
+            items.push({ t: b.end, kind: 'zone', text: 'leave ' + z.event, sub: 'returns', ev: z.event + 1 });
+        });
+        if (S.finishFrom !== null && S.measures[S.finishFrom])
+            items.push({ t: S.measures[S.finishFrom].start, kind: 'finish', text: 'finish', sub: 'plays once', ev: E.EVENT.FINISH });
+        items.push({ t: dur, kind: 'fade', text: 'fade out', sub: 'stops', ev: E.EVENT.FADE_OUT });
+
+        items.sort(function (a, b) { return a.t - b.t; });
+        var w = lane.clientWidth || 1;
+        var rowEnd = [0, 0];
+        items.forEach(function (it) {
+            var b = document.createElement('button');
+            b.className = 'evm ' + it.kind;
+            b.innerHTML = '<b>' + it.text + '</b><i>' + it.sub + '</i>';
+            b.title = it.text + ' \u2014 event ' + it.ev + ': ' + it.sub;
+            b.onclick = function () { fire(it.ev); };
+            lane.appendChild(b);
+            var bw = b.offsetWidth || 70;
+            var left = Math.max(0, Math.min(Math.max(0, w - bw), (it.t / dur) * w - bw / 2));
+            var row = rowEnd[0] <= left + 2 ? 0 : (rowEnd[1] <= left + 2 ? 1 : 0);
+            b.style.left = left + 'px';
+            b.style.top = (row * 30) + 'px';
+            rowEnd[row] = left + bw + 8;
+        });
+        lane.style.height = (rowEnd[1] > 0 ? 62 : 32) + 'px';
+    }
+
 
     function renderCheck() {
         var ul = $('check');
@@ -459,6 +501,7 @@
         renderZones();
         renderCheck();
         renderSel();
+        renderEvents();
         queueDraw();
     }
 
@@ -658,13 +701,17 @@
         return S.audioLive ? S.ctx.currentTime : performance.now() / 1000;
     }
 
-    /* Where the playhead is: the arrangement while it plays, otherwise wherever
-     * the last scrub left it. */
+    /* The cursor follows the slice that is actually playing, not the wall clock:
+     * a zone entry moves the song backwards, and a clocked cursor would keep
+     * running past the section the music is looping in. */
     function playbackPos() {
-        if (!S.playing) return S.playhead;
-        var t = clock() - S.t0;
-        if (t >= 0) S.playhead = Math.min(t, S.buffer ? S.buffer.duration : t);
-        return S.playhead;
+        var total = S.buffer ? S.buffer.duration : 0;
+        if (!S.playing) return Math.max(0, Math.min(total, S.playhead));
+        if (S.slice) {
+            var inside = S.slice.start + Math.max(0, clock() - S.slice.at);
+            S.playhead = Math.max(S.slice.start, Math.min(S.slice.end, inside));
+        }
+        return Math.max(0, Math.min(total, S.playhead));
     }
 
     function playSlice(offset, duration, when) {
@@ -716,6 +763,7 @@
             S.partial = { measure: idx, from: at };
 
         S.playing = true;
+        S.slice = null;
         S.t0 = clock() - at;
         S.nextAt = clock();
         S.current = S.partial ? S.partial.measure : -1;
@@ -732,9 +780,8 @@
     }
 
     function stop() {
-        if (S.playing && S.buffer) {
-            S.playhead = Math.max(0, Math.min(S.buffer.duration, clock() - S.t0));
-        }
+        if (S.playing) S.playhead = playbackPos();
+        S.slice = null;
         if (S.timer) clearInterval(S.timer);
         S.timer = null;
         S.sources.forEach(function (s) { try { s.stop(); } catch (e) { /* already ended */ } });
@@ -785,12 +832,15 @@
             }
             if (dur <= 0.01) { stop(); return; }
             playSlice(from, dur, Math.max(now, S.nextAt));
+            S.slice = { start: from, end: m.end, at: Math.max(now, S.nextAt) };
             S.current = node.measure;
             var v = $('autoramp').checked ? S.player.rampValue(S.nextAt + dur - S.t0) : S.player.value;
             S.player.setValue(v);
             S.player.step();
             S.nextAt += dur;
         }
+        playbackPos();
+        if (clock() - S.lastDraw > 0.05) draw();
         updateReadout();
     }
 
@@ -864,10 +914,6 @@
         if (S.playing) stop();
         else play(S.playhead);
     });
-    Array.prototype.forEach.call(document.querySelectorAll('#eventbtns button[data-ev]'), function (b) {
-        b.onclick = function () { fire(parseInt(b.dataset.ev, 10)); };
-    });
-
     $('exportjson').onclick = function () {
         if (!S.map) return;
         download(($('title').value || 'song') + '.json',
@@ -888,7 +934,7 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
 
-    window.addEventListener('resize', queueDraw);
+    window.addEventListener('resize', function () { renderEvents(); queueDraw(); });
     var saved = storedVolume();
     setVolume(saved === null ? 0.4 : saved, false);
     S.volumeChosen = saved !== null;

@@ -47,6 +47,9 @@
 
 <section id="wavebox">
   <canvas id="wave"></canvas>
+  <div id="eventlane" aria-label="events, laid out where they fire"></div>
+  <p id="evhint" class="muted">Each marker sits where its event fires: the event on top, what it does
+    underneath. Press one while the preview plays.</p>
   <div id="selbar" hidden>
     <span class="muted">make it</span>
     <button data-type="side" title="plays only while the run is going well — long combos, big air">side material</button>
@@ -110,14 +113,6 @@
   </div>
 
   <div id="now" class="muted">stopped</div>
-
-  <div class="events" id="eventbtns">
-    <span class="muted" title="the numbered events the game sends the music director — press one while it plays">events:</span>
-    <button data-ev="36" title="event 36: the game loads this track — start it from the top">load</button>
-    <button data-ev="10" title="event 10: the run ended — jump to the finish section, play it once, stop">finish</button>
-    <button data-ev="19" title="event 19: take the music away — fade out and stop instead of cutting">fade out</button>
-    <span id="zonebtns"></span>
-  </div>
 
   <div class="export">
     <button id="exportjson">Export song.json</button>

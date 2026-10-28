@@ -24,12 +24,14 @@ leaves the page.
 4. **Ctrl**-drag to mark a section; the chips under it set what it is — **side material** (only at
    the top of the control value), **course zone** (entered by event *N*, left by *N+1*), **finish**,
    or **clear**. **Ctrl**-click an existing zone to select it and retype it in place.
-5. **Play** runs it through the game's director: the value ramps over 13, 17 or 20 s, every
+5. The events the game sends sit **under the track**, each where it fires and labelled with what it
+   does — press one during the preview to hear that moment.
+6. **Play** runs it through the game's director: the value ramps over 13, 17 or 20 s, every
    measure end takes a branch, and the event buttons jump — `load` (36), `finish` (10),
    `fade out` (19), each zone's enter/leave. **demo sequence** fires all of it on a timer.
-6. Free to leave the **vol** slider alone: it sets the preview's level only (a hot master is
+7. Free to leave the **vol** slider alone: it sets the preview's level only (a hot master is
    turned down on load, never up), and the file and the export are unaffected.
-7. **Export song.json** (the arrangement and the map it produced) or **Export map** (the dump
+8. **Export song.json** (the arrangement and the map it produced) or **Export map** (the dump
    `ssx3_music.py` prints for a shipped song, for comparison).
 
 ## Status

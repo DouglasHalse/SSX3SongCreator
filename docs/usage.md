@@ -26,10 +26,12 @@ the audio never leaves the page.
    once and ends) or **clear**. **ctrl**-click a zone to select it with "course zone" already lit,
    so retyping it is one click.
 
-## The events in the footer
+## The events under the track
 
 The game does not only play the song, it tells it what is happening: numbered events carrying
-actions. The footer buttons fire them by hand while the preview runs, so each one can be heard.
+actions. They are laid out under the waveform at the point they fire, each marked with what it does,
+and pressing one during the preview fires it there — the cursor jumps with the music, so the marker
+and the bar under the playhead always agree.
 
 | button | event | fired in a race when | what the song does |
 |---|---|---|---|
