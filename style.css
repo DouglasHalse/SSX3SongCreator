@@ -149,6 +149,30 @@ footer {
 
 .muted { color: var(--muted); }
 
+#intro {
+  padding: 10px 16px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 26px;
+  align-items: baseline;
+}
+#intro p { margin: 0; max-width: 78ch; color: #b6c0cd; }
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend li { display: flex; align-items: center; gap: 6px; }
+.chip { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.chip.side { background: rgba(240,180,41,.55); }
+.chip.zone { background: rgba(111,179,255,.45); }
+.chip.finish { background: rgba(106,212,139,.45); }
+.small { color: var(--muted); font-size: 12px; margin: 0 0 6px; max-width: 60ch; }
+
 h1 { white-space: nowrap; }
 
 @media (max-width: 940px) {

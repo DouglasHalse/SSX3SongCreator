@@ -31,17 +31,30 @@
   </div>
 </header>
 
+<div id="intro">
+  <p>Bring a finished track. This page cuts it into bars and records <b>when</b> each part plays
+    during a run: SSX 3's music director follows that instead of playing the file straight through.</p>
+  <ul class="legend">
+    <li><span class="chip side"></span>side material — heard only at high intensity</li>
+    <li><span class="chip zone"></span>course zone — jumped into and back out of by events</li>
+    <li><span class="chip finish"></span>finish — played once when the run ends</li>
+  </ul>
+</div>
+
 <section id="wavebox">
   <canvas id="wave"></canvas>
-  <p id="hint" class="muted">Click a measure to mark it as side material. Drag to select measures, then mark a zone or the finish.</p>
+  <p id="hint" class="muted">Click a bar to make it side material · drag across bars, then press
+    <b>Course zone from selection</b> or <b>Finish from selection</b></p>
 </section>
 
 <main>
   <section>
-    <h2>Zones</h2>
+    <h2>Course zones</h2>
+    <p class="small">Ride into one during a run and the song jumps to that section; ride out and it
+      goes back to where it was.</p>
     <ul id="zones" class="list"></ul>
     <div class="row">
-      <button id="addzone">Zone from selection</button>
+      <button id="addzone">Course zone from selection</button>
       <button id="setfinish">Finish from selection</button>
     </div>
     <h2>Finish</h2>
@@ -50,6 +63,7 @@
 
   <section>
     <h2>Check</h2>
+    <p class="small">What would break the map.</p>
     <ul id="check" class="list"></ul>
     <h2>Song</h2>
     <dl id="stats"></dl>

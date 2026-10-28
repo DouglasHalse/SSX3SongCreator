@@ -250,7 +250,7 @@
         ul.innerHTML = '';
         if (!S.zones.length) {
             var li = document.createElement('li');
-            li.innerHTML = '<span class="muted">no zones — drag a range, then “Zone from selection”</span>';
+            li.innerHTML = '<span class="muted">none yet — drag across bars, then press “Course zone from selection”</span>';
             ul.appendChild(li);
         }
         S.zones.forEach(function (z, i) {
