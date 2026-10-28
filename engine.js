@@ -392,6 +392,30 @@ var SSX3 = (function () {
             if (z.from < 0 || z.to >= arr.measures.length) errors.push('zone ' + z.event + ' is outside the song');
         });
 
+        /* Length advice: a zone is entered and left by events, and switches land on
+         * measure boundaries, so a one-bar zone is over before it is heard. */
+        var barSec = arr.measures && arr.measures.length
+            ? arr.measures[0].end - arr.measures[0].start : 0;
+        (arr.zones || []).forEach(function (z) {
+            var bars = z.to - z.from + 1;
+            if (bars < 2)
+                warnings.push('zone ' + z.event + ' is one bar: switches land on measure boundaries, so it is over before it is heard');
+            else if (bars > 16)
+                warnings.push('zone ' + z.event + ' is ' + bars + ' bars (' +
+                    (bars * barSec).toFixed(0) + ' s): a rider is usually through an area in a few seconds');
+        });
+
+        /* Side material that is one bar long blips at the top of the ramp. */
+        var run = 0;
+        for (var i = 0; i <= (arr.roles || []).length; i++) {
+            var isSide = arr.roles && arr.roles[i] === 'side';
+            if (isSide) run++;
+            else if (run) {
+                if (run < 2) warnings.push('side material of one bar (' + (i - 1) + ') blips on and off');
+                run = 0;
+            }
+        }
+
         var regs = {};
         (arr.zones || []).forEach(function (z, i) {
             var r = i + 1;

@@ -53,7 +53,8 @@ recompiled game:
 
 - [`docs/music-system.md`](docs/music-system.md) — the files, the map, the control value, the
   events, the loop bank, and the ways a hand-made song breaks.
-- [`docs/usage.md`](docs/usage.md) — the app, control by control.
+- [`docs/usage.md`](docs/usage.md) — the app control by control, and what each section type is
+  for, with the gameplay each one answers to.
 
 ## Tests
 

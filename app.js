@@ -334,9 +334,12 @@
         }
         S.zones.forEach(function (z, i) {
             var li = document.createElement('li');
+            var bars = z.to - z.from + 1;
+            var secs = (S.measures[z.from] && S.measures[z.to])
+                ? S.measures[z.to].end - S.measures[z.from].start : 0;
             li.innerHTML = '<span class="tag">' + z.event + '/' + (z.event + 1) + '</span>' +
-                '<span>measures ' + z.from + '-' + z.to + '</span>' +
-                '<span class="muted">' + (S.measures[z.from] ? fmt(S.measures[z.from].start) : '') + '</span>';
+                '<span>bars ' + z.from + '–' + z.to + '</span>' +
+                '<span class="muted">' + bars + (bars === 1 ? ' bar · ' : ' bars · ') + secs.toFixed(1) + ' s</span>';
             var del = document.createElement('button');
             del.textContent = 'remove';
             del.onclick = function () {

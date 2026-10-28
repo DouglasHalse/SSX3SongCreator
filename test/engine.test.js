@@ -176,3 +176,40 @@ test('material with no onsets has no tempo', function () {
 test('too little audio is refused', function () {
     assert.strictEqual(E.detectTempo([clicks(120, 1, 44100)], 44100), null);
 });
+
+/* ---- structural advice -------------------------------------------------- */
+
+function oneZone(bars) {
+    return {
+        title: 't', artist: '', bpm: 120, beatsPerMeasure: 4, rampSeconds: 17,
+        source: { name: 'x', duration: 60 },
+        measures: E.measures({ bpm: 120, beatsPerMeasure: 4, duration: 60, offset: 0 }),
+        roles: E.measures({ bpm: 120, beatsPerMeasure: 4, duration: 60, offset: 0 }).map(function () { return 'normal'; }),
+        zones: [{ event: 1, from: 2, to: 2 + bars - 1, name: 'zone 1' }],
+        finishFrom: null
+    };
+}
+
+test('a one-bar zone is called out, a four-bar zone is not', function () {
+    var short = oneZone(1);
+    var w = E.validate(E.build(short), short).warnings.join(' ');
+    assert.match(w, /one bar/, 'expected a length warning, got: ' + w);
+
+    var ok = oneZone(4);
+    var w2 = E.validate(E.build(ok), ok).warnings.join(' ');
+    assert.doesNotMatch(w2, /one bar/);
+    assert.doesNotMatch(w2, /rider is usually through/);
+});
+
+test('a very long zone is called out', function () {
+    var long = oneZone(24);
+    var w = E.validate(E.build(long), long).warnings.join(' ');
+    assert.match(w, /rider is usually through an area/);
+});
+
+test('one bar of side material blips', function () {
+    var a = oneZone(4);
+    a.roles[0] = 'side';
+    var w = E.validate(E.build(a), a).warnings.join(' ');
+    assert.match(w, /side material of one bar/);
+});

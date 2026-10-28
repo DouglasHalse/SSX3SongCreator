@@ -76,6 +76,11 @@ input[type=text] { width: 120px; }
 .fields label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .src { display: flex; gap: 8px; align-items: center; }
 
+dl.types { margin: 0 0 14px; }
+dl.types dt { color: var(--accent); font-size: 12px; margin-top: 8px; }
+dl.types dd { margin: 2px 0 0; color: #b6c0cd; font-size: 12px; line-height: 1.45; }
+dl.types .eg { color: var(--muted); display: block; margin-top: 2px; }
+
 #wavebox { position: relative; }
 
 #selbar {

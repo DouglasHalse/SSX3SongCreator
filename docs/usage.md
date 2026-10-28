@@ -41,6 +41,42 @@ arrangement from the top.
    map** — the same map as the text dump that `tools/ssx3_music.py` prints for a
    shipped song, for comparison.
 
+## What each section is for
+
+The game decides what plays from two things: where the rider is, and how well the run is going.
+The three section types answer those two questions.
+
+**Side material — played when the run goes well.** The control value ramps up over 13-20 s and is
+reset by a bail, so this is the layer the game adds and takes away. It has to be the part of the
+song that can disappear: drums, bass, a riff with no hook in it. Put the melody here and the song
+loses its identity every time the value drops.
+
+*Gameplay: the drums that come in during a long combo and cut the moment you crash; the extra layer
+while you hold a fast line down an open slope; nothing at all while you are picking yourself up.*
+
+**Course zone — played where the rider is.** An area of the run: the game fires event *N* on entry,
+*N+1* on the way out, and the song returns to where it was. It is a variation, not a second song —
+same tempo, same key, different instrument, register or groove, four to sixteen bars — so jumping in
+and out never sounds like a mistake.
+
+*Gameplay: rail park — sparse drums, no pads; powder bowl — wide and slow, snare out; tunnel or
+canyon — low end, more reverb, tighter; the big kicker — a rise into the hit; a night street section
+— brighter, more top end; halfpipe — steady, no fills, because you hear it again on every run.*
+
+Short zones are wasted: switches land on measure boundaries, so a one-bar zone is over before it is
+heard, and the Check panel says so. A zone much longer than sixteen bars rarely gets heard at all
+before the rider is out of the area.
+
+**Finish — played when the run ends.** Once, then the song ends: the resolve, not another loop.
+
+*Gameplay: the landing after the last jump, the track winding down instead of cutting; the finish
+gate where the run is scored.*
+
+**Where to put them.** The natural shape is a main chain that carries the song, two or three zones
+on the parts of the run that look different, side material on the chorus-equivalent, and the finish
+on the outro. Three distinct areas in a course means three zones; a zone on a stretch that looks
+like the rest of the course is a jump nobody can explain.
+
 ## Limits
 
 An event applies just before the next scheduled slice (the scheduler reads about a tenth of a

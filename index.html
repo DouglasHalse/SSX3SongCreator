@@ -49,10 +49,10 @@
   <canvas id="wave"></canvas>
   <div id="selbar" hidden>
     <span class="muted">make it</span>
-    <button data-type="side">side material</button>
-    <button data-type="zone">course zone</button>
-    <button data-type="finish">finish</button>
-    <button data-type="clear">clear</button>
+    <button data-type="side" title="plays only while the run is going well — long combos, big air">side material</button>
+    <button data-type="zone" title="a stretch of the run: the game jumps in on entry and back out on exit">course zone</button>
+    <button data-type="finish" title="played once when the run ends, then the song ends">finish</button>
+    <button data-type="clear" title="remove every marking in the selection">clear</button>
   </div>
   <p id="hint" class="muted">Drag the strip along the top to scrub · drag across bars, then pick a type ·
     click a bar to toggle side material · click a zone to select it</p>
@@ -69,6 +69,26 @@
   </section>
 
   <section>
+    <h2>What each section is</h2>
+    <dl class="types">
+      <dt>side material</dt>
+      <dd>Heard only while the value is high — a long combo, big air, a fast line. It is missing
+        half the time by design, so it must be the part of the song that can vanish: drums, bass, a
+        riff without the hook. <span class="eg">e.g. the drop that starts on a ten-trick combo and
+        cuts the moment you crash.</span></dd>
+      <dt>course zone</dt>
+      <dd>A stretch of the run, not a mood: the game jumps in when the rider enters that area and
+        back out when they leave. Same tempo and key, different instrument or register, four to
+        sixteen bars — a variation, so jumping in and out never sounds like a mistake.
+        <span class="eg">e.g. rail park — sparse drums, no pads; powder bowl — wide and slow, snare
+        out; tunnel — low end and reverb; the big kicker — a rise into the hit; a night street
+        section — brighter, more top end.</span></dd>
+      <dt>finish</dt>
+      <dd>Played once when the run ends, then the song ends: the resolve, not another loop.
+        <span class="eg">e.g. the landing after the last jump, with the track winding down instead
+        of cutting.</span></dd>
+    </dl>
+
     <h2>Check</h2>
     <p class="small">What would break the map.</p>
     <ul id="check" class="list"></ul>
