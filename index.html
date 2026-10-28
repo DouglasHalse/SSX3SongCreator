@@ -36,8 +36,10 @@
 </header>
 
 <div id="intro">
-  <p>Bring a finished track. This page cuts it into bars and records <b>when</b> each part plays
-    during a run: SSX 3's music director follows that instead of playing the file straight through.</p>
+  <p>Bring a finished track. The page cuts it into bars and records <b>when</b> each part plays
+    during a run: SSX 3's music director follows that instead of playing the file straight through.
+    In short: <b>load a track</b>, <b>ctrl-drag</b> the bars that belong to each state of a run,
+    then press <b>Sample run</b> to hear it as a ride.</p>
   <ul class="legend">
     <li><span class="chip side"></span>side material — heard only at high intensity</li>
     <li><span class="chip zone"></span>course zone — jumped into and back out of by events</li>
@@ -72,6 +74,11 @@
   </section>
 
   <section>
+    <h2>What the rider hears</h2>
+    <p class="small">The game never plays your file straight through. It plays the bars you marked,
+      in the state the run is in.</p>
+    <dl class="types" id="situations"></dl>
+
     <h2>What each section is</h2>
     <dl class="types">
       <dt>side material</dt>
@@ -105,7 +112,7 @@
     <button id="play">Play</button>
     <button id="stop">Stop</button>
     <label class="muted"><input id="autoramp" type="checkbox" checked> ramp</label>
-    <label class="muted"><input id="autodemo" type="checkbox"> demo sequence</label>
+    <button id="samplerun" title="play a scripted ride: flowing, a zone, a bail, the finish">Sample run</button>
     <div id="value" title="control value the game sends"><div id="valuebar"></div><span id="valuetext">0</span></div>
     <label class="muted" title="preview level only — the file and the export are untouched">vol
       <input id="vol" type="range" min="0" max="100" step="1" value="40">
@@ -113,6 +120,7 @@
   </div>
 
   <div id="now" class="muted">stopped</div>
+  <div id="runnote" class="muted"></div>
 
   <div class="export">
     <button id="exportjson">Export song.json</button>

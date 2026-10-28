@@ -90,6 +90,7 @@ input[type=range] {
 }
 #voltext { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; display: inline-block; }
 
+#runnote { font-size: 12px; color: var(--accent); min-height: 16px; }
 #eventlane { position: relative; margin: 6px 0 0; }
 
 .evm {

@@ -26,7 +26,7 @@
         nextAt: 0,
         sources: [],
         current: -1,
-        demo: [],
+        run: [],
         drawQueued: false,
         playhead: 0,
         selZone: null,
@@ -457,6 +457,50 @@
     }
 
 
+    function barText(a, b) { return a === b ? 'bar ' + a : 'bars ' + a + '\u2013' + b; }
+
+    /* What the rider hears, in the four states the game puts a song in. This is
+     * the whole idea of the tool, so it is stated with the song's own bars. */
+    function renderSituations() {
+        var dl = $('situations');
+        if (!dl) return;
+        dl.innerHTML = '';
+        if (!S.buffer || !S.measures.length) return;
+
+        var normal = [], side = [], i;
+        for (i = 0; i < S.roles.length; i++) (S.roles[i] === 'side' ? side : normal).push(i);
+
+        var rows = [];
+        rows.push(['riding', normal.length
+            ? barText(normal[0], normal[normal.length - 1]) + ' in order, looping'
+            : '\u2014']);
+        var reachTop = Math.round(100 / 127 * S.ramp);
+        rows.push(['riding well', side.length
+            ? 'the value passes 100 (about ' + reachTop + ' s of riding after a bail) and the bar before them exits into '
+              + barText(side[0], side[side.length - 1])
+            : 'nothing different yet: the song sounds the same at any value']);
+        if (S.zones.length) {
+            S.zones.forEach(function (z) {
+                rows.push(['in zone ' + z.event, 'jump to ' + barText(z.from, z.to) + ', loop there, return on leaving']);
+            });
+        } else {
+            rows.push(['in a zone', 'none yet: a course with no zones plays the song straight through']);
+        }
+        rows.push(['crossing the line', S.finishFrom !== null
+            ? barText(S.finishFrom, S.measures.length - 1) + ' once, then silence'
+            : 'not set: the song loops for ever']);
+        rows.push(['menus, movies', 'the game switches to its loop bank; this tool does not build one yet']);
+
+        rows.forEach(function (kv) {
+            var dt = document.createElement('dt');
+            dt.textContent = kv[0];
+            var dd = document.createElement('dd');
+            dd.textContent = kv[1];
+            dl.appendChild(dt);
+            dl.appendChild(dd);
+        });
+    }
+
     function renderCheck() {
         var ul = $('check');
         ul.innerHTML = '';
@@ -502,6 +546,7 @@
         renderCheck();
         renderSel();
         renderEvents();
+        renderSituations();
         queueDraw();
     }
 
@@ -771,9 +816,7 @@
         S.sel = null;
         S.selZone = null;
         renderSel();
-        S.demo = $('autodemo').checked
-            ? demoSchedule().map(function (d) { return { at: d.at + at, ev: d.ev }; })
-            : [];
+        S.run = [];
         S.timer = setInterval(tick, 25);
         $('play').classList.add('primary');
         frame();
@@ -795,16 +838,22 @@
         queueDraw();
     }
 
-    function demoSchedule() {
-        var list = [];
+    /* A scripted ride: the states a real run goes through, in the order it goes
+     * through them, so the map's behaviour can be heard instead of imagined. */
+    function sampleRun() {
         var z = S.zones[0];
+        play(0);
+        S.run = [{ at: 1, note: 'the run starts: your bars play in order' },
+                 { at: 5, note: 'flowing: the value climbs towards 127, so busier bars may take over' }];
         if (z) {
-            list.push({ at: 6, ev: z.event });
-            list.push({ at: 16, ev: z.event + 1 });
+            S.run.push({ at: 9, ev: z.event, note: 'into a course zone: the song jumps to bars ' + z.from + '\u2013' + z.to + ' and loops them' });
+            S.run.push({ at: 17, ev: z.event + 1, note: 'out of the zone: back to the bar the song was on' });
         }
-        if (S.finishFrom !== null) list.push({ at: 26, ev: E.EVENT.FINISH });
-        list.push({ at: 34, ev: E.EVENT.FADE_OUT });
-        return list;
+        S.run.push({ at: 21, bail: true, note: 'a bail: the value drops back to zero' });
+        if (S.finishFrom !== null)
+            S.run.push({ at: 26, ev: E.EVENT.FINISH, note: 'across the line: the finish section plays once, then the song ends' });
+        S.run.push({ at: 32, ev: E.EVENT.FADE_OUT, note: 'the music is taken away' });
+        $('runnote').textContent = 'sample run: starting';
     }
 
     function tick() {
@@ -813,8 +862,11 @@
         var now = clock();
         var elapsed = now - S.t0;
 
-        while (S.demo.length && S.demo[0].at <= elapsed) {
-            S.player.fire(S.demo.shift().ev);
+        while (S.run && S.run.length && S.run[0].at <= elapsed) {
+            var step = S.run.shift();
+            if (step.ev !== undefined) S.player.fire(step.ev);
+            if (step.bail) { S.t0 = clock(); S.player.setValue(0); }
+            if (step.note) $('runnote').textContent = step.note;
         }
 
         for (var guard = 0; guard < 64 && S.nextAt < now + 0.12; guard++) {
@@ -844,6 +896,21 @@
         updateReadout();
     }
 
+    /* Which chain is playing, not which bars: the main chain and a zone play their
+     * own copies of the same measures, so the index alone cannot tell them apart. */
+    function sectionLabel() {
+        if (!S.player || !S.player.node || !S.map) return '';
+        var id = S.player.node.id;
+        var ids = S.map.ids || {};
+        var zs = ids.zones || [];
+        for (var i = 0; i < zs.length; i++)
+            if (id >= zs[i].first && id <= zs[i].last) return 'in zone ' + zs[i].event;
+        var fin = ids.finish || [];
+        if (fin.length && id >= fin[0] && id <= fin[fin.length - 1]) return 'finishing';
+        if (S.roles[S.current] === 'side') return 'side material';
+        return 'main chain';
+    }
+
     /* The readout follows the scheduler, not the animation frame: a throttled
      * frame loop would otherwise leave the value stuck while the song plays on. */
     function updateReadout() {
@@ -854,8 +921,7 @@
         var m = S.current >= 0 ? S.measures[S.current] : null;
         $('now').textContent = m
             ? (S.audioLive ? '' : 'silent preview  ·  ') + 'measure ' + S.current + '  ·  ' + fmt(m.start)
-              + '  ·  value ' + v + '  ·  '
-              + (S.zones.some(function (z) { return S.current >= z.from && S.current <= z.to; }) ? 'in a zone' : 'main chain')
+              + '  ·  value ' + v + '  ·  ' + sectionLabel()
             : 'starting';
     }
 
@@ -903,6 +969,7 @@
     $('vol').oninput = function () { setVolume(num('vol', 50) / 100, true); };
     $('play').onclick = function () { play(S.playhead); };
     $('stop').onclick = function () { stop(); };
+    $('samplerun').onclick = function () { sampleRun(); };
 
     /* Space plays from the cursor, and stops where it is. */
     document.addEventListener('keydown', function (ev) {

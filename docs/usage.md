@@ -7,6 +7,38 @@ sections, a finish section, and a preview that follows the game's director.
 Open `index.html` in a browser. No server, no build step, no dependencies —
 the audio never leaves the page.
 
+## How the music works
+
+A song in this game is not a file that plays from beginning to end. It is **slices** — the track cut
+into one bar each — and **a map** saying which slice plays after which.
+
+At the end of every bar the game reads one number, 0-127: how well the run is going. It climbs while
+the rider is flowing and is reset by a bail. Low numbers take the calm bars, high numbers take the
+busy ones, so the same song gets harder as the run gets better. That is the whole trick behind the
+"dynamic" soundtrack: there is no separate fast version of a track, only a branch the number picks.
+
+On top of that the game tells the music what is happening:
+
+| what happens in the run | the game sends | what the song does |
+|---|---|---|
+| the track is loaded | `load` (36) | starts |
+| the rider flows, then bails | nothing — just the value | drifts up to the busy bars, drops back on the bail |
+| the rider enters a rail park, a tunnel, a powder bowl | `zone N` | remembers the bar it was on, jumps to that area's bars, loops them |
+| the rider leaves that area | `leave N` (event *N+1*) | returns to the remembered bar |
+| the rider crosses the finish line | `finish` (10) | plays the ending bars once and stops |
+| the music is taken away (menus, movies) | `fade out` (19) | fades out and stops |
+
+## What you do
+
+1. Load a finished track. It is cut into bars at the detected tempo.
+2. Decide which bars belong to which state: the normal song, the "going well" bars, one section for
+   each distinct area of the course, and the ending. That is the creative work — arranging a linear
+   track into a graph, not composing.
+3. Press **Sample run** to hear a scripted ride through those states, or drag the cursor and fire the
+   events under the track yourself.
+4. Export the arrangement. Turning it into the game's `.mpf` and `.mus` files is the packer's job,
+   which does not exist yet.
+
 ## Using it
 
 1. **Load audio** (WAV, MP3, OGG, FLAC — whatever the browser decodes) or press
