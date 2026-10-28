@@ -397,14 +397,18 @@
             ul.appendChild(li);
         });
 
+        /* By number, not by position: the numbers are identities handed out as
+         * zones are made, so the order in the song can look jumbled here. */
         var zb = $('zonebtns');
         zb.innerHTML = '';
-        S.zones.forEach(function (z) {
+        S.zones.slice().sort(function (a, b) { return a.event - b.event; }).forEach(function (z) {
             var inBtn = document.createElement('button');
-            inBtn.textContent = 'zone ' + z.event;
+            inBtn.textContent = 'zone ' + z.event + ' · bars ' + z.from + '–' + z.to;
+            inBtn.title = 'event ' + z.event + ': the rider enters the area — the song stores its place and jumps here';
             inBtn.onclick = function () { fire(z.event); };
             var outBtn = document.createElement('button');
-            outBtn.textContent = 'leave ' + z.event;
+            outBtn.textContent = 'leave ' + z.event + ' · event ' + (z.event + 1);
+            outBtn.title = 'event ' + (z.event + 1) + ': the rider leaves — the song returns to where it was';
             outBtn.onclick = function () { fire(z.event + 1); };
             zb.appendChild(inBtn);
             zb.appendChild(outBtn);

@@ -26,6 +26,24 @@ the audio never leaves the page.
    once and ends) or **clear**. **ctrl**-click a zone to select it with "course zone" already lit,
    so retyping it is one click.
 
+## The events in the footer
+
+The game does not only play the song, it tells it what is happening: numbered events carrying
+actions. The footer buttons fire them by hand while the preview runs, so each one can be heard.
+
+| button | event | fired in a race when | what the song does |
+|---|---|---|---|
+| **load** | 36 | the game loads this track | start from the top |
+| **finish** | 10 | the rider crosses the finish line | jump to the finish section, play it once, stop |
+| **fade out** | 19 | the music is being taken away (run over, menu) | fade out and stop rather than cutting |
+| **zone *N*** | *N* | the rider enters course zone *N* | store where the song is, jump into that zone's bars, which loop |
+| **leave *N*** | *N+1* | the rider leaves that zone | jump back to the stored position |
+
+Every zone takes a **pair** of numbers, which is why `leave 5` is event *6*: the enter event stores
+the position and the leave event returns to it. Numbers are identities, not order — the zone that
+starts earliest in the song can still be zone 5, because numbers are handed out as zones are made.
+The list is sorted by number; the left panel lists the zones in the order a run reaches them.
+
 **Level.** The **vol** slider is the preview's own level: it changes nothing in the file and
 nothing in the export. A hot master is turned down when it loads — the app aims at about -24 dBFS
 RMS and only ever turns material down, never up — and the setting is remembered in the browser, so
