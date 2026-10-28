@@ -170,6 +170,9 @@ main section { min-width: 0; }
 .list li.err span { color: #ff9a9a; }
 .list li.warn span { color: var(--side); }
 .list li.ok span { color: var(--muted); }
+.list li em { font-style: normal; color: var(--muted); }
+#donorcheck li { font-size: 12px; }
+.evnum { width: 56px; padding: 1px 4px; font-size: 11px; margin-left: 4px; }
 
 .row { display: flex; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
 

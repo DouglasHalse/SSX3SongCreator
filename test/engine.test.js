@@ -246,3 +246,71 @@ test('playback carries on from where it was seeked to', function () {
     p.step();
     assert.strictEqual(p.node.measure, 6, 'stepping from measure 5 lands on 6');
 });
+
+/* ---- donors ------------------------------------------------------------- */
+
+var DONOR = { id: 'd', bpm: 184, beatsPerMeasure: 4, measureSeconds: 1.3043, zones: [1, 2, 9] };
+
+function arrangementAt(bpm) {
+    var m = E.measures({ bpm: bpm, beatsPerMeasure: 4, duration: 60, offset: 0 });
+    return {
+        bpm: bpm, beatsPerMeasure: 4, rampSeconds: 17, measures: m,
+        roles: m.map(function () { return 'normal'; }), zones: [], finishFrom: null
+    };
+}
+
+test('a donor fit reports the grid and the events still missing', function () {
+    var a = arrangementAt(184);
+    var fit = E.donorFit(a, DONOR);
+    assert.strictEqual(fit.gridMatch, true);
+    assert.ok(Math.abs(fit.factor - 1) < 0.02);
+
+    var byKey = {};
+    fit.checks.forEach(function (c) { byKey[c.key] = c.ok; });
+    assert.strictEqual(byKey.grid, true);
+    assert.strictEqual(byKey.zone1, false, 'no zone marked yet');
+    assert.strictEqual(byKey.zone9, false);
+    assert.strictEqual(byKey.finish, false);
+    assert.strictEqual(byKey.high, false);
+    assert.match(fit.advice.join(' '), /side bars/);
+
+    a.zones = [{ event: 1, from: 2, to: 3 }];
+    a.finishFrom = 10;
+    a.roles[0] = 'side';
+    var fit2 = E.donorFit(a, DONOR);
+    var byKey2 = {};
+    fit2.checks.forEach(function (c) { byKey2[c.key] = c.ok; });
+    assert.strictEqual(byKey2.zone1, true);
+    assert.strictEqual(byKey2.zone2, false, 'a zone numbered 2 is still missing');
+    assert.strictEqual(byKey2.finish, true);
+    assert.strictEqual(byKey2.high, true);
+});
+
+test('a tempo mismatch is measured as a factor', function () {
+    var fit = E.donorFit(arrangementAt(92), DONOR);
+    assert.strictEqual(fit.gridMatch, false);
+    assert.ok(Math.abs(fit.factor - 0.5) < 0.02, 'expected half the bar length, got ' + fit.factor);
+    assert.match(fit.advice.join(' '), /184 BPM/);
+});
+
+test('an unmeasured donor says so instead of guessing', function () {
+    var a = arrangementAt(184);
+    var fit = E.donorFit(a, { id: 'trace-only', measureSeconds: null, zones: [1, 2, 9] });
+    var byKey = {};
+    fit.checks.forEach(function (c) { byKey[c.key] = c.ok; });
+    assert.strictEqual(byKey.grid, null, 'unknown grid is null, not false');
+});
+
+test('a zone whose leave lands on the finish shares event 10', function () {
+    var a = oneZone(4);
+    a.zones = [{ event: 9, from: 2, to: 5, name: 'zone 9' }];
+    a.finishFrom = 8;
+    var map = E.build(a);
+    var tens = map.events.filter(function (e) { return e.number === 10; });
+    assert.strictEqual(tens.length, 1, 'one event 10, not two');
+    assert.ok(tens[0].actions.length >= 2, 'it carries the return and the finish');
+    assert.strictEqual(tens[0].actions.some(function (x) { return x.type === 'goto'; }), true);
+
+    var res = E.validate(map, a);
+    assert.strictEqual(res.errors.join(' ').indexOf('defined twice'), -1, res.errors.join(' '));
+});

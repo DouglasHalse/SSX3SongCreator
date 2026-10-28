@@ -329,7 +329,15 @@ var SSX3 = (function () {
         var start = top;
 
         /* events */
+        /* One number can carry several actions -- the shipped maps use that: a
+         * course's last zone leaves on the same event that ends the run. */
         function ev(number, actions) {
+            for (var i = 0; i < map.events.length; i++) {
+                if (map.events[i].number === number) {
+                    map.events[i].actions = map.events[i].actions.concat(actions);
+                    return;
+                }
+            }
             map.events.push({ number: number, actions: actions });
         }
         var first = start;
@@ -429,6 +437,79 @@ var SSX3 = (function () {
         if (!evs[EVENT.FADE_OUT]) warnings.push('no fade-out event (19)');
 
         return { errors: errors, warnings: warnings };
+    }
+
+    /* ------------------------------------------------------------- donors */
+
+    /* What a donor song asks of an arrangement. A donor is a shipped map you
+     * inherit: it fixes the grid and the events your song must answer, so the
+     * author's job becomes filling those slots rather than inventing a map.
+     * Pure: takes the arrangement and the donor, returns the gap. */
+    function donorFit(arr, donor) {
+        var checks = [], advice = [];
+        var measure = (arr.measures && arr.measures.length)
+            ? arr.measures[0].end - arr.measures[0].start : 0;
+        var zones = arr.zones || [];
+        var roles = arr.roles || [];
+
+        var factor = null, gridMatch = null;
+        if (donor.measureSeconds && measure) {
+            factor = donor.measureSeconds / measure;
+            gridMatch = Math.abs(factor - 1) < 0.015;
+        }
+
+        checks.push({
+            key: 'grid',
+            label: donor.measureSeconds
+                ? 'one slice = ' + donor.measureSeconds.toFixed(3) + ' s of your track'
+                : 'one slice = the bar length of the donor',
+            ok: gridMatch,
+            detail: !donor.measureSeconds ? 'this profile has not measured the donor grid'
+                : !measure ? 'load a track first'
+                : gridMatch ? 'your bars are that long'
+                : 'your bar is ' + measure.toFixed(3) + ' s'
+        });
+
+        (donor.zones || []).forEach(function (n) {
+            var has = zones.some(function (z) { return z.event === n; });
+            checks.push({
+                key: 'zone' + n,
+                label: 'answers course zone ' + n,
+                ok: has,
+                detail: has ? 'marked' : 'no zone of yours uses event ' + n
+            });
+        });
+
+        if (!donor.zones)
+            checks.push({ key: 'zones', label: 'answers the zone events of the course', ok: null,
+                          detail: 'this profile has not measured which zones the donor answers' });
+
+        var hasFinish = arr.finishFrom !== null && arr.finishFrom !== undefined;
+        checks.push({
+            key: 'finish',
+            label: 'answers the finish',
+            ok: hasFinish,
+            detail: hasFinish ? 'marked, from bar ' + arr.finishFrom : 'mark where the song ends'
+        });
+
+        var sideCount = 0;
+        for (var i = 0; i < roles.length; i++) if (roles[i] === 'side') sideCount++;
+        checks.push({
+            key: 'high',
+            label: 'has bars for the top of the value ramp',
+            ok: sideCount > 0,
+            detail: sideCount ? sideCount + ' side bars' : 'mark the bars that only play when the run is going well'
+        });
+
+        if (factor !== null && !gridMatch) {
+            advice.push('Your bar is ' + measure.toFixed(3) + ' s and the slice of the donor is ' +
+                donor.measureSeconds.toFixed(3) + ' s. Cut your track at ' + donor.bpm + ' BPM, time-stretch it by ' +
+                factor.toFixed(3) + 'x, or rewrite the BPM of the song once the map writer exists.');
+        }
+        if (sideCount === 0)
+            advice.push('Without side bars the song sounds the same at any value: the ramp has nothing to switch to.');
+
+        return { checks: checks, advice: advice, factor: factor, gridMatch: gridMatch, measure: measure };
     }
 
     /* ---------------------------------------------------------- simulation */
@@ -597,6 +678,7 @@ var SSX3 = (function () {
         measures: measures,
         build: build,
         validate: validate,
+        donorFit: donorFit,
         Player: Player,
         toText: toText,
         songFile: songFile

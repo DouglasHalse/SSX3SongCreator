@@ -74,6 +74,17 @@
   </section>
 
   <section>
+    <h2>Donor song</h2>
+    <p class="small">A shipped song whose map you inherit. It fixes the grid — one slice is one bar
+      of yours — and the events your song has to answer, so the job is filling its slots rather than
+      writing a map.</p>
+    <label class="muted">donor <select id="donor"></select></label>
+    <p id="donorfacts" class="small"></p>
+    <ul id="donorcheck" class="list"></ul>
+    <p id="donoradvice" class="small"></p>
+    <button id="donorrenumber" hidden>Renumber my zones</button>
+    <button id="donorcut" hidden>Cut at the donor's grid</button>
+
     <h2>What the rider hears</h2>
     <p class="small">The game never plays your file straight through. It plays the bars you marked,
       in the state the run is in.</p>
@@ -128,6 +139,7 @@
   </div>
 </footer>
 
+<script src="donors.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>

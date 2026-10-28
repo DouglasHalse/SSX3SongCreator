@@ -34,6 +34,13 @@ leaves the page.
 8. **Export song.json** (the arrangement and the map it produced) or **Export map** (the dump
    `ssx3_music.py` prints for a shipped song, for comparison).
 
+## Donors
+
+Writing a Pathfinder map is the expensive half. Pick a **donor** — a shipped song whose map you
+inherit — and the page states its grid and the zone events it answers, then marks what your
+arrangement is still missing, with a one-click retime to the donor's bar length. Fill the slots and
+the map's branches, zone jumps and finish already work. See [`docs/donors.md`](docs/donors.md).
+
 ## Status
 
 - **Done**: tempo detection, measures cut on the beat grid, side material, zones with call/return, the finish
@@ -58,6 +65,8 @@ recompiled game:
   events, the loop bank, and the ways a hand-made song breaks.
 - [`docs/usage.md`](docs/usage.md) — the app control by control, and what each section type is
   for, with the gameplay each one answers to.
+- [`docs/donors.md`](docs/donors.md) — inheriting a shipped song's map instead of writing one: what
+  a donor fixes, and what the page checks against yours.
 
 ## Tests
 

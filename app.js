@@ -396,9 +396,32 @@
             var bars = z.to - z.from + 1;
             var secs = (S.measures[z.from] && S.measures[z.to])
                 ? S.measures[z.to].end - S.measures[z.from].start : 0;
-            li.innerHTML = '<span class="tag">' + z.event + '/' + (z.event + 1) + '</span>' +
-                '<span>bars ' + z.from + '–' + z.to + '</span>' +
+            li.innerHTML = '<span class="tag">answers</span>' +
+                '<span>bars ' + z.from + ' – ' + z.to + '</span>' +
                 '<span class="muted">' + bars + (bars === 1 ? ' bar · ' : ' bars · ') + secs.toFixed(1) + ' s</span>';
+
+            /* The number has to be the one the course fires, so it can be edited. */
+            var ev = document.createElement('input');
+            ev.type = 'number';
+            ev.className = 'evnum';
+            ev.min = '1';
+            ev.max = '62';
+            ev.value = z.event;
+            ev.title = 'the event this zone answers: the course fires N on entry and N+1 on leaving';
+            ev.onchange = function () {
+                var v = parseInt(ev.value, 10);
+                var bad = !isFinite(v) || v < 1 || v > 62 || eventReserved(v) ||
+                    (eventReserved(v + 1) && v + 1 !== E.EVENT.FINISH) ||
+                    S.zones.some(function (o) {
+                        return o !== z && (v === o.event || v === o.event + 1 || v + 1 === o.event);
+                    });
+                if (bad) { ev.value = z.event; note('event ' + (isFinite(v) ? v : '?') + ' is already used'); return; }
+                z.event = v;
+                S.zones.sort(function (a, b) { return a.from - b.from; });
+                cacheMap();
+                renderAll();
+            };
+
             var del = document.createElement('button');
             del.textContent = 'remove';
             del.onclick = function () {
@@ -406,6 +429,7 @@
                 cacheMap();
                 renderAll();
             };
+            li.appendChild(ev);
             li.appendChild(del);
             ul.appendChild(li);
         });
@@ -458,6 +482,61 @@
 
 
     function barText(a, b) { return a === b ? 'bar ' + a : 'bars ' + a + '\u2013' + b; }
+
+    /* The donor panel: what the chosen song demands, and the gap to this
+     * arrangement. This is the page's instruction sheet. */
+    function currentDonor() {
+        var list = window.SSX3_DONORS || [];
+        var id = $('donor').value;
+        for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+        return null;
+    }
+
+    function renderDonor() {
+        var d = currentDonor();
+        var facts = $('donorfacts');
+        $('donorcheck').innerHTML = '';
+        $('donoradvice').textContent = '';
+        $('donorcut').hidden = true;
+        facts.textContent = '';
+        if (!d) return;
+
+        var bits = [];
+        if (d.measureSeconds) bits.push('one slice = ' + d.measureSeconds.toFixed(3) + ' s (' + d.beatsPerMeasure + ' beats at ' + d.bpm + ' BPM)');
+        if (d.slices) bits.push(d.slices + ' slices');
+        if (d.samples) bits.push(d.samples + ' samples');
+        if (d.loopBank) bits.push('a ' + d.loopBank + '-sound loop bank');
+        facts.textContent = bits.join(' \u00b7 ');
+        if (d.note) facts.textContent += (bits.length ? '. ' : '') + d.note;
+
+        if (!S.buffer || !S.measures.length) {
+            $('donoradvice').textContent = 'Load a track to see what this donor still needs.';
+            return;
+        }
+
+        var fit = E.donorFit(arr(), d);
+        fit.checks.forEach(function (c) {
+            var li = document.createElement('li');
+            li.className = c.ok === true ? 'ok' : (c.ok === null ? 'warn' : 'err');
+            var mark = c.ok === true ? '\u2713 ' : (c.ok === null ? '? ' : '\u00d7 ');
+            li.innerHTML = '<span>' + mark + c.label + ' <em class="muted">' + c.detail + '</em></span>';
+            $('donorcheck').appendChild(li);
+        });
+        $('donoradvice').textContent = fit.advice.join(' ');
+        var want = (d.zones || []).slice().sort(function (a, b) { return a - b; });
+        var have = S.zones.map(function (z) { return z.event; }).sort(function (a, b) { return a - b; });
+        var sameSet = want.length === have.length && want.every(function (v, i) { return v === have[i]; });
+        if (want.length && !sameSet) {
+            $('donorrenumber').hidden = false;
+            $('donorrenumber').textContent = want.length === S.zones.length
+                ? 'Renumber my zones to ' + want.join(', ')
+                : 'Renumber ' + want.length + ' zones to ' + want.join(', ');
+        }
+        if (d.bpm && d.beatsPerMeasure && fit.gridMatch === false) {
+            $('donorcut').hidden = false;
+            $('donorcut').textContent = 'Cut my track at ' + d.bpm + ' BPM, ' + d.beatsPerMeasure + ' beats';
+        }
+    }
 
     /* What the rider hears, in the four states the game puts a song in. This is
      * the whole idea of the tool, so it is stated with the song's own bars. */
@@ -547,6 +626,7 @@
         renderSel();
         renderEvents();
         renderSituations();
+        renderDonor();
         queueDraw();
     }
 
@@ -728,6 +808,10 @@
         src.onended = function () {
             try { src.disconnect(); gain.disconnect(); } catch (e) { /* gone */ }
         };
+    }
+
+    function eventReserved(n) {
+        return n === E.EVENT.START || n === E.EVENT.FINISH || n === E.EVENT.FADE_OUT || n === E.EVENT.LOAD;
     }
 
     function nextEventNumber() {
@@ -970,6 +1054,25 @@
     $('play').onclick = function () { play(S.playhead); };
     $('stop').onclick = function () { stop(); };
     $('samplerun').onclick = function () { sampleRun(); };
+    $('donor').onchange = function () { renderDonor(); };
+    $('donorrenumber').onclick = function () {
+        var d = currentDonor();
+        if (!d || !d.zones || !d.zones.length) return;
+        var want = d.zones.slice().sort(function (a, b) { return a - b; });
+        S.zones.sort(function (a, b) { return a.from - b.from; });
+        for (var i = 0; i < S.zones.length && i < want.length; i++) S.zones[i].event = want[i];
+        S.zones.sort(function (a, b) { return a.from - b.from; });
+        cacheMap();
+        renderAll();
+    };
+    $('donorcut').onclick = function () {
+        var d = currentDonor();
+        if (!d || !d.bpm) return;
+        $('bpm').value = d.bpm;
+        if (d.beatsPerMeasure) $('beats').value = d.beatsPerMeasure;
+        note('bars are now the donor\u2019s length: ' + (d.measureSeconds || 0).toFixed(3) + ' s');
+        rebuild();
+    };
 
     /* Space plays from the cursor, and stops where it is. */
     document.addEventListener('keydown', function (ev) {
@@ -1002,6 +1105,18 @@
     }
 
     window.addEventListener('resize', function () { renderEvents(); queueDraw(); });
+    (function fillDonors() {
+        var sel = $('donor');
+        var list = window.SSX3_DONORS || [];
+        if (!sel) return;
+        list.forEach(function (d) {
+            var o = document.createElement('option');
+            o.value = d.id;
+            o.textContent = d.title;
+            sel.appendChild(o);
+        });
+        if (list.length) sel.value = list[0].id;
+    })();
     var saved = storedVolume();
     setVolume(saved === null ? 0.4 : saved, false);
     S.volumeChosen = saved !== null;
