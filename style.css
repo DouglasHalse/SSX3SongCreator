@@ -140,10 +140,9 @@ footer {
   background: #10141a;
   border: 1px solid var(--line);
   border-radius: 4px;
-  overflow: hidden;
 }
-#valuebar { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); }
-#valuetext { position: absolute; right: -34px; top: -4px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#valuebar { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); border-radius: 3px; }
+#valuetext { position: absolute; right: -32px; top: -4px; color: var(--muted); font-variant-numeric: tabular-nums; }
 #value { margin-right: 34px; }
 
 #now { min-width: 260px; }

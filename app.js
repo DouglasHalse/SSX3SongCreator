@@ -21,6 +21,7 @@
         check: null,
         player: null,
         playing: false,
+        audioLive: false,
         t0: 0,
         nextAt: 0,
         sources: [],
@@ -416,7 +417,12 @@
 
     /* ------------------------------------------------------------ transport */
 
+    function clock() {
+        return S.audioLive ? S.ctx.currentTime : performance.now() / 1000;
+    }
+
     function playSlice(offset, duration, when) {
+        if (!S.audioLive) return;
         var src = S.ctx.createBufferSource();
         src.buffer = S.buffer;
         src.connect(S.ctx.destination);
@@ -428,15 +434,29 @@
         S.sources.push(src);
     }
 
+    /* A suspended context freezes its clock -- and resume() can stay pending for
+     * ever when nothing can start the device -- so the preview runs on the wall
+     * clock and moves onto the audio clock once that comes up, keeping its place. */
+    function adoptAudioClock() {
+        if (S.audioLive || !S.ctx || S.ctx.state !== 'running') return;
+        var elapsed = clock() - S.t0;
+        var next = S.nextAt - S.t0;
+        S.audioLive = true;
+        S.t0 = S.ctx.currentTime - elapsed;
+        S.nextAt = S.t0 + next;
+    }
+
     function play() {
         if (!S.buffer) { loadDemo(); }
-        ensureCtx().resume();
         if (!S.map) return;
+        var ctx = ensureCtx();
+        ctx.resume();
         stop();
+        S.audioLive = ctx.state === 'running';
         S.player = new E.Player(S.map, { rampSeconds: S.ramp });
         S.player.fire(E.EVENT.START);
         S.playing = true;
-        S.t0 = S.ctx.currentTime + 0.06;
+        S.t0 = clock() + 0.06;
         S.nextAt = S.t0;
         S.current = -1;
         S.demo = $('autodemo').checked ? demoSchedule() : [];
@@ -451,6 +471,7 @@
         S.sources.forEach(function (s) { try { s.stop(); } catch (e) { /* already ended */ } });
         S.sources = [];
         S.playing = false;
+        S.audioLive = false;
         S.player = null;
         S.current = -1;
         $('play').classList.remove('primary');
@@ -472,7 +493,8 @@
 
     function tick() {
         if (!S.playing) return;
-        var now = S.ctx.currentTime;
+        adoptAudioClock();
+        var now = clock();
         var elapsed = now - S.t0;
 
         while (S.demo.length && S.demo[0].at <= elapsed) {
@@ -495,20 +517,27 @@
             S.player.step();
             S.nextAt += dur;
         }
+        updateReadout();
     }
 
-    function frame() {
-        if (!S.playing) return;
-        var now = S.ctx.currentTime;
+    /* The readout follows the scheduler, not the animation frame: a throttled
+     * frame loop would otherwise leave the value stuck while the song plays on. */
+    function updateReadout() {
         var v = $('autoramp').checked
-            ? Math.round(127 * Math.min(1, (now - S.t0) / S.ramp))
+            ? Math.round(127 * Math.min(1, (clock() - S.t0) / S.ramp))
             : (S.player ? S.player.value : 0);
         setValueMeter(v);
         var m = S.current >= 0 ? S.measures[S.current] : null;
         $('now').textContent = m
-            ? 'measure ' + S.current + '  ·  ' + fmt(m.start) + '  ·  value ' + v + '  ·  '
+            ? (S.audioLive ? '' : 'silent preview  ·  ') + 'measure ' + S.current + '  ·  ' + fmt(m.start)
+              + '  ·  value ' + v + '  ·  '
               + (S.zones.some(function (z) { return S.current >= z.from && S.current <= z.to; }) ? 'in a zone' : 'main chain')
             : 'starting';
+    }
+
+    function frame() {
+        if (!S.playing) return;
+        updateReadout();
         queueDraw();
         requestAnimationFrame(frame);
     }
@@ -565,4 +594,7 @@
 
     window.addEventListener('resize', queueDraw);
     renderAll();
+
+    /* Open the page with #debug to reach the state from the console. */
+    if (location.hash === '#debug') window.__song = S;
 })();
