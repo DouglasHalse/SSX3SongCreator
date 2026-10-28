@@ -31,8 +31,13 @@
         playhead: 0,
         selZone: null,
         scrubbing: false,
-        lastScrub: 0
+        lastScrub: 0,
+        master: null,
+        volume: 0.4,
+        volumeChosen: false
     };
+
+    var VOLUME_KEY = 'ssx3songcreator.volume';
 
     /* the top strip of the canvas is the ruler: drag it to scrub, the body below
      * it is for marking sections */
@@ -57,7 +62,43 @@
     function ensureCtx() {
         if (!S.ctx) S.ctx = new (window.AudioContext || window.webkitAudioContext)();
         if (S.ctx.state === 'suspended') S.ctx.resume();
+        if (!S.master && S.ctx) {
+            S.master = S.ctx.createGain();
+            S.master.gain.value = S.volume;
+            S.master.connect(S.ctx.destination);
+        }
         return S.ctx;
+    }
+
+    function storedVolume() {
+        try {
+            var v = parseFloat(localStorage.getItem(VOLUME_KEY));
+            return isFinite(v) ? Math.max(0, Math.min(1, v)) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setVolume(v, remember) {
+        S.volume = Math.max(0, Math.min(1, v));
+        if (S.master) S.master.gain.value = S.volume;
+        $('vol').value = Math.round(S.volume * 100);
+        $('voltext').textContent = Math.round(S.volume * 100) + '%';
+        if (remember) {
+            S.volumeChosen = true;
+            try { localStorage.setItem(VOLUME_KEY, S.volume.toFixed(3)); } catch (e) { /* private mode */ }
+        }
+    }
+
+    /* Mastered tracks arrive far hotter than a preview wants to be: -24 dBFS RMS
+     * is a comfortable listening level, and the cap means this only ever turns
+     * loud material down, never quiet material up. */
+    function rmsOf(buffer) {
+        var d = buffer.getChannelData(0);
+        var step = Math.max(1, Math.floor(d.length / 200000));
+        var sum = 0, n = 0;
+        for (var i = 0; i < d.length; i += step) { sum += d[i] * d[i]; n++; }
+        return Math.sqrt(sum / Math.max(1, n));
     }
 
     function note(text) { $('tempo').textContent = text; }
@@ -81,6 +122,10 @@
         $('srcname').textContent = name + '  (' + buffer.duration.toFixed(1) + ' s, ' +
             buffer.numberOfChannels + ' ch, ' + buffer.sampleRate + ' Hz)';
         stop();
+        if (!S.volumeChosen) {
+            var rms = rmsOf(buffer);
+            setVolume(rms > 0.02 ? Math.max(0.15, Math.min(1, 0.06 / rms)) : 0.4, false);
+        }
         var det = detectTempo();
         if (det && det.confidence >= 0.15) {
             $('bpm').value = det.bpm.toFixed(2);
@@ -584,7 +629,7 @@
         var gain = S.ctx.createGain();
         gain.gain.value = 0.85;
         src.connect(gain);
-        gain.connect(S.ctx.destination);
+        gain.connect(S.master || S.ctx.destination);
         src.start(0, S.playhead, 0.14);
         src.onended = function () {
             try { src.disconnect(); gain.disconnect(); } catch (e) { /* gone */ }
@@ -620,7 +665,7 @@
         if (!S.audioLive) return;
         var src = S.ctx.createBufferSource();
         src.buffer = S.buffer;
-        src.connect(S.ctx.destination);
+        src.connect(ensureCtx() && S.master ? S.master : S.ctx.destination);
         src.start(when, offset, duration + 0.002);
         src.onended = function () {
             var i = S.sources.indexOf(src);
@@ -775,6 +820,7 @@
         note('octave changed — the markings stayed on the same music, not the same bar number');
         rebuild();
     };
+    $('vol').oninput = function () { setVolume(num('vol', 50) / 100, true); };
     $('play').onclick = function () { play(); };
     $('stop').onclick = function () { stop(); };
     Array.prototype.forEach.call(document.querySelectorAll('#eventbtns button[data-ev]'), function (b) {
@@ -802,6 +848,9 @@
     }
 
     window.addEventListener('resize', queueDraw);
+    var saved = storedVolume();
+    setVolume(saved === null ? 0.4 : saved, false);
+    S.volumeChosen = saved !== null;
     renderAll();
 
     /* Open the page with #debug to reach the state from the console. */

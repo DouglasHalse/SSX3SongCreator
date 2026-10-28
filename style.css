@@ -83,6 +83,13 @@ dl.types .eg { color: var(--muted); display: block; margin-top: 2px; }
 
 #wavebox { position: relative; }
 
+input[type=range] {
+  width: 92px;
+  vertical-align: middle;
+  accent-color: var(--accent);
+}
+#voltext { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; display: inline-block; }
+
 #selbar {
   position: absolute;
   left: 0;

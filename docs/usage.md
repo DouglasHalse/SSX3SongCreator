@@ -27,6 +27,11 @@ the audio never leaves the page.
    "course zone" already lit, so switching it to the finish or to side material is
    one click. Clicking a bar instead toggles side material on it.
 
+**Level.** The **vol** slider is the preview's own level: it changes nothing in the file and
+nothing in the export. A hot master is turned down when it loads — the app aims at about -24 dBFS
+RMS and only ever turns material down, never up — and the setting is remembered in the browser, so
+the next song opens at the level you chose.
+
 **Scrubbing.** The strip along the top of the waveform is the timeline: drag it
 to move the playhead, and the file plays under your finger so you can find a
 beat or a drop by ear. The position stays where you leave it, and Play starts the
