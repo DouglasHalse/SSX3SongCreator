@@ -1,0 +1,10 @@
+# editor and OS junk
+.DS_Store
+Thumbs.db
+*~
+
+# audio and exports used while testing
+*.wav
+*.mp3
+song.json
+*-map.txt
