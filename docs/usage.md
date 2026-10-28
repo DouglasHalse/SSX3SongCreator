@@ -17,26 +17,29 @@ the audio never leaves the page.
    If the answer is half or double the truth, **×2** / **÷2**: the markings follow the music, not
    the bar number, so nothing is lost. **Beats/measure** is 4 unless the song is in something else.
    The status panel shows the measure length, so a wrong tempo is visible at once.
-3. **Select a section** by dragging across bars. The chips that appear under it
-   set what the section is: **side material** (heard only at the top of the
-   control value, as the game's own songs do), **course zone** (the game enters
-   it by event *N* and leaves it by *N+1*, and the song returns to where it was —
-   a call and a return, as on the console), **finish** (from there the song
-   plays once and ends) or **clear**.
-4. **Retype in place**: click a zone to select it — the chips come back with
-   "course zone" already lit, so switching it to the finish or to side material is
-   one click. Clicking a bar instead toggles side material on it.
+3. **Move the cursor** by dragging the waveform. The position under the pointer is where playback
+   will start, and the file plays under your finger so you can hear your way to a boundary.
+4. **Mark a section** with **ctrl** (or cmd) + drag. The chips under the selection set what it is:
+   **side material** (heard only at the top of the control value, as the game's own songs do),
+   **course zone** (the game enters it by event *N* and leaves it by *N+1*, and the song returns to
+   where it was — a call and a return, as on the console), **finish** (from there the song plays
+   once and ends) or **clear**. **ctrl**-click a zone to select it with "course zone" already lit,
+   so retyping it is one click.
 
 **Level.** The **vol** slider is the preview's own level: it changes nothing in the file and
 nothing in the export. A hot master is turned down when it loads — the app aims at about -24 dBFS
 RMS and only ever turns material down, never up — and the setting is remembered in the browser, so
 the next song opens at the level you chose.
 
-**Scrubbing.** The strip along the top of the waveform is the timeline: drag it
-to move the playhead, and the file plays under your finger so you can find a
-beat or a drop by ear. The position stays where you leave it, and Play starts the
-arrangement from the top.
-5. **Play** runs the arrangement through the director model: the control value
+**Seeking into a zone** plays the main chain, not the zone: the game only enters a zone on an
+event, so there is no honest way for a seek to know how the song got there. Use the zone's
+`zone N` button in the footer to hear it.
+
+**The strip along the top** of the waveform is the time ruler; you can drag there too.
+5. **Play** — or **space** — runs the arrangement from the cursor through the director model.
+   Pressing it again stops, and the cursor stays where it stopped. Seeking into the middle starts on
+   the measure under the cursor, with the first slice clipped to what is left of it, and the value
+   ramp carries on as if the song had been running: the control value
    ramps 0-127 over the chosen time (13, 17 or 20 s — the three the game uses),
    every measure end takes a branch, and the event buttons jump: `load` (36),
    `finish` (10), `fade out` (19), and each zone's enter/leave pair.

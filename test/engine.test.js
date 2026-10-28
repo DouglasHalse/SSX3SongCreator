@@ -213,3 +213,36 @@ test('one bar of side material blips', function () {
     var w = E.validate(E.build(a), a).warnings.join(' ');
     assert.match(w, /side material of one bar/);
 });
+
+/* ---- seeking ------------------------------------------------------------ */
+
+test('a seek lands on the measure under the cursor', function () {
+    var a = oneZone(4);
+    a.roles[6] = 'side';
+    var map = E.build(a);
+    var p = new E.Player(map, { rampSeconds: 17 });
+
+    assert.ok(p.seekToMeasure(5));
+    assert.strictEqual(p.node.measure, 5, 'main chain measure');
+
+    /* side material has a node of its own, and that is what plays it */
+    assert.ok(p.seekToMeasure(6));
+    assert.strictEqual(p.node.measure, 6);
+
+    /* inside a zone the main chain copy wins: that is what plays without an event */
+    assert.ok(p.seekToMeasure(3));
+    assert.strictEqual(p.node.measure, 3);
+    assert.strictEqual(p.node.id, map.ids.main[3]);
+
+    assert.strictEqual(p.seekToMeasure(999), false, 'a measure outside the song is refused');
+});
+
+test('playback carries on from where it was seeked to', function () {
+    var a = oneZone(4);
+    var map = E.build(a);
+    var p = new E.Player(map, { rampSeconds: 17 });
+    p.setValue(0);
+    p.seekToMeasure(5);
+    p.step();
+    assert.strictEqual(p.node.measure, 6, 'stepping from measure 5 lands on 6');
+});

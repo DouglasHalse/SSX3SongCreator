@@ -325,6 +325,7 @@ var SSX3 = (function () {
             ids.finish = fchain;
         }
 
+        map.ids = ids;
         var start = top;
 
         /* events */
@@ -469,6 +470,27 @@ var SSX3 = (function () {
             this.node = this.byId[b.to] || null;
         }
         return this.node;
+    };
+
+    /* The node a measure plays on: the main chain one if it has one (that is
+     * what plays by default), then the side copy, then any zone or finish copy.
+     * Returns false when the measure is not in the map at all. */
+    Player.prototype.seekToMeasure = function (m) {
+        var ids = this.map.ids || {};
+        var id = null;
+        if (ids.main && ids.main[m] !== undefined) id = ids.main[m];
+        else if (ids.side && ids.side[m] !== undefined) id = ids.side[m];
+        else {
+            for (var i = 0; i < this.map.nodes.length; i++) {
+                var n = this.map.nodes[i];
+                if (n.kind === 'audio' && n.measure === m) { id = n.id; break; }
+            }
+        }
+        if (id === null || !this.byId[id]) return false;
+        this.node = this.byId[id];
+        this.stopped = false;
+        this.skipJunctions();
+        return true;
     };
 
     Player.prototype.fire = function (number) {

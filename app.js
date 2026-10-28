@@ -33,6 +33,7 @@
         scrubbing: false,
         lastScrub: 0,
         master: null,
+        partial: null,
         volume: 0.4,
         volumeChosen: false
     };
@@ -487,10 +488,11 @@
         var rect = $('wave').getBoundingClientRect();
         var x = ev.clientX - rect.left;
 
-        if (ev.clientY - rect.top <= RULER_H) {
+        /* plain drag moves the cursor; ctrl (or cmd) drag marks a section */
+        if (!(ev.ctrlKey || ev.metaKey)) {
             S.scrubbing = true;
             try { $('wave').setPointerCapture(ev.pointerId); } catch (e) { /* no capture */ }
-            stop();
+            if (S.playing) stop();
             scrubTo((x / rect.width) * S.buffer.duration);
             return;
         }
@@ -520,7 +522,7 @@
             scrubTo((x / rect.width) * S.buffer.duration);
             return;
         }
-        $('wave').style.cursor = (ev.clientY - rect.top <= RULER_H) ? 'ew-resize' : 'default';
+        $('wave').style.cursor = (ev.ctrlKey || ev.metaKey) ? 'crosshair' : 'ew-resize';
         if (!drag || !S.buffer) return;
         var idx = measureAt(x);
         if (Math.abs(ev.clientX - drag.x) > 3) drag.moved = true;
@@ -686,30 +688,49 @@
         S.nextAt = S.t0 + next;
     }
 
-    function play() {
+    /* Playback starts at the cursor. Seeking into the middle of a song means
+     * starting on the measure under it, with the first slice clipped to what is
+     * left of that measure, and the clock set back so the ramp and the playhead
+     * carry on as if the song had been running all along. */
+    function play(from) {
         if (!S.buffer) { loadDemo(); }
         if (!S.map) return;
         var ctx = ensureCtx();
         ctx.resume();
         stop();
         S.audioLive = ctx.state === 'running';
+        var total = S.buffer ? S.buffer.duration : 0;
+        var at = Math.max(0, Math.min(total, from || 0));
+        if (total && at > total - 0.05) at = 0;
+
         S.player = new E.Player(S.map, { rampSeconds: S.ramp });
         S.player.fire(E.EVENT.START);
+        S.partial = null;
+
+        var idx = indexAt(at);
+        if (idx >= 0 && at > 0.02 && S.player.seekToMeasure(idx))
+            S.partial = { measure: idx, from: at };
+
         S.playing = true;
-        S.t0 = clock() + 0.06;
-        S.nextAt = S.t0;
-        S.current = -1;
-        S.playhead = 0;
+        S.t0 = clock() - at;
+        S.nextAt = clock();
+        S.current = S.partial ? S.partial.measure : -1;
+        S.playhead = at;
         S.sel = null;
         S.selZone = null;
         renderSel();
-        S.demo = $('autodemo').checked ? demoSchedule() : [];
+        S.demo = $('autodemo').checked
+            ? demoSchedule().map(function (d) { return { at: d.at + at, ev: d.ev }; })
+            : [];
         S.timer = setInterval(tick, 25);
         $('play').classList.add('primary');
         frame();
     }
 
     function stop() {
+        if (S.playing && S.buffer) {
+            S.playhead = Math.max(0, Math.min(S.buffer.duration, clock() - S.t0));
+        }
         if (S.timer) clearInterval(S.timer);
         S.timer = null;
         S.sources.forEach(function (s) { try { s.stop(); } catch (e) { /* already ended */ } });
@@ -752,9 +773,14 @@
             if (node.kind !== 'audio') { S.player.step(); continue; }
             var m = S.measures[node.measure];
             if (!m) { stop(); return; }
-            var dur = m.end - m.start;
+            var from = m.start, dur = m.end - m.start;
+            if (S.partial && S.partial.measure === node.measure) {
+                from = S.partial.from;
+                dur = m.end - from;
+                S.partial = null;
+            }
             if (dur <= 0.01) { stop(); return; }
-            playSlice(m.start, dur, Math.max(now, S.nextAt));
+            playSlice(from, dur, Math.max(now, S.nextAt));
             S.current = node.measure;
             var v = $('autoramp').checked ? S.player.rampValue(S.nextAt + dur - S.t0) : S.player.value;
             S.player.setValue(v);
@@ -821,8 +847,19 @@
         rebuild();
     };
     $('vol').oninput = function () { setVolume(num('vol', 50) / 100, true); };
-    $('play').onclick = function () { play(); };
+    $('play').onclick = function () { play(S.playhead); };
     $('stop').onclick = function () { stop(); };
+
+    /* Space plays from the cursor, and stops where it is. */
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key !== ' ' && ev.code !== 'Space') return;
+        var t = ev.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
+                  t.isContentEditable)) return;
+        ev.preventDefault();
+        if (S.playing) stop();
+        else play(S.playhead);
+    });
     Array.prototype.forEach.call(document.querySelectorAll('#eventbtns button[data-ev]'), function (b) {
         b.onclick = function () { fire(parseInt(b.dataset.ev, 10)); };
     });
