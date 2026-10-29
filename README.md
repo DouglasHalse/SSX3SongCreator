@@ -25,7 +25,8 @@ leaves the page.
    the top of the control value), **course zone** (entered by event *N*, left by *N+1*), **finish**,
    or **clear**. **Ctrl**-click an existing zone to select it and retype it in place.
 5. The events the game sends sit **under the track**, each where it fires and labelled with what it
-   does — press one during the preview to hear that moment.
+   does — press one during the preview to hear that moment. The **Moments** panel lists which of them
+   rest on a measured signal and which are still unmeasured.
 6. **Play** runs it through the game's director: the value ramps over 13, 17 or 20 s, every
    measure end takes a branch, and the event buttons jump — `load` (36), `finish` (10),
    `fade out` (19), each zone's enter/leave. **demo sequence** fires all of it on a timer.
@@ -67,6 +68,8 @@ recompiled game:
   for, with the gameplay each one answers to.
 - [`docs/donors.md`](docs/donors.md) — inheriting a shipped song's map instead of writing one: what
   a donor fixes, and what the page checks against yours.
+- [`docs/moments.md`](docs/moments.md) — the model this is heading for: moments as the unit of
+  authorship, cues on the second track, and the table of which moments have a measured signal.
 
 ## Tests
 

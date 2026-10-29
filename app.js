@@ -388,7 +388,7 @@
         ul.innerHTML = '';
         if (!S.zones.length) {
             var li = document.createElement('li');
-            li.innerHTML = '<span class="muted">none yet — ctrl-drag across bars, then pick “course zone”</span>';
+            li.innerHTML = '<span class="muted">none yet — ctrl-drag across bars, then pick “course trigger”</span>';
             ul.appendChild(li);
         }
         S.zones.forEach(function (z, i) {
@@ -453,7 +453,7 @@
         S.zones.forEach(function (z) {
             var a = S.measures[z.from], b = S.measures[z.to];
             if (!a || !b) return;
-            items.push({ t: a.start, kind: 'zone', text: 'zone ' + z.event, sub: 'jumps in', ev: z.event });
+            items.push({ t: a.start, kind: 'zone', text: 'trigger ' + z.event, sub: 'jumps in', ev: z.event });
             items.push({ t: b.end, kind: 'zone', text: 'leave ' + z.event, sub: 'returns', ev: z.event + 1 });
         });
         if (S.finishFrom !== null && S.measures[S.finishFrom])
@@ -560,10 +560,10 @@
             : 'nothing different yet: the song sounds the same at any value']);
         if (S.zones.length) {
             S.zones.forEach(function (z) {
-                rows.push(['in zone ' + z.event, 'jump to ' + barText(z.from, z.to) + ', loop there, return on leaving']);
+                rows.push(['in a course trigger ' + z.event, 'jump to ' + barText(z.from, z.to) + ', loop there, return on leaving']);
             });
         } else {
-            rows.push(['in a zone', 'none yet: a course with no zones plays the song straight through']);
+            rows.push(['in a course trigger', 'none yet: with no triggers the song plays straight through']);
         }
         rows.push(['crossing the line', S.finishFrom !== null
             ? barText(S.finishFrom, S.measures.length - 1) + ' once, then silence'
@@ -988,7 +988,7 @@
         var ids = S.map.ids || {};
         var zs = ids.zones || [];
         for (var i = 0; i < zs.length; i++)
-            if (id >= zs[i].first && id <= zs[i].last) return 'in zone ' + zs[i].event;
+            if (id >= zs[i].first && id <= zs[i].last) return 'in trigger ' + zs[i].event;
         var fin = ids.finish || [];
         if (fin.length && id >= fin[0] && id <= fin[fin.length - 1]) return 'finishing';
         if (S.roles[S.current] === 'side') return 'side material';

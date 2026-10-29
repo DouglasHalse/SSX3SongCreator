@@ -103,6 +103,83 @@ event, so there is no honest way for a seek to know how the song got there. Use 
 
 ## What each section is for
 
+The song answers two things: a value that climbs and resets, and the events the game fires. These are
+the roles you can give a stretch of your track.
+
+**Side material — the top of the value ladder.** The director writes a 0-127 value as
+`127 * updates / T` with `T` = 800, 1000 or 1200 updates (about 13, 17 or 20 s) and resets it on
+rider events carrying a 0-1 strength classed at 0.25 and 0.65. Bars marked as side material are only
+reachable above 100, so they are the rung the song climbs into. They are absent a good part of the
+time by construction, so they have to work without the rest of the mix.
+
+**Course trigger — where the game says the rider hit a trigger.** The course fires event *N* on
+entering one and *N+1* on leaving; the song stores the bar it was on and returns there. It is a
+variation rather than a second song: same tempo and key, different instrument or register, four to
+sixteen bars. Short ones are wasted — switches land on measure boundaries, so a one-bar trigger is
+over before it is heard, and the Check panel says so.
+
+**Finish — event 10 at the line.** The ending bars play once and the song stops.
+
+### What is measured, and what is not
+
+| | |
+|---|---|
+| measured | the 0-127 ramp and its reset strengths; events 0, 36, 10; `N` / `N+1` with store and return; the action vocabulary; Deep End's grid and slice counts |
+| inferred | which rider events cause a value reset (the research suggests landings and impacts) |
+| not measured | what the game counts as a course trigger; whether anything fires for being airborne, for a landing or for a bail |
+
+The page and this document only claim the first row. What follows from that gap — moments as the unit
+of authorship, and the cue bus on the second track — is in [`moments.md`](moments.md).
+
+**Where to put them.** The natural shape is a main chain that carries the song, two or three triggers
+on the parts of the run that differ, side material at the top of the ladder, and the finish on the
+outro.
+
+## The events under the track
+
+The game does not only play the song, it tells it what is happening: numbered events carrying
+actions. They are laid out under the waveform at the point they fire, each marked with what it does,
+and pressing one during the preview fires it there — the cursor jumps with the music, so the marker
+and the bar under the playhead always agree.
+
+| button | event | fired in a race when | what the song does |
+|---|---|---|---|
+| **load** | 36 | the game loads this track | start from the top |
+| **finish** | 10 | the rider crosses the finish line | jump to the finish section, play it once, stop |
+| **fade out** | 19 | the music is being taken away (run over, menu) | fade out and stop rather than cutting |
+| **zone *N*** | *N* | the rider enters course zone *N* | store where the song is, jump into that zone's bars, which loop |
+| **leave *N*** | *N+1* | the rider leaves that zone | jump back to the stored position |
+
+Every zone takes a **pair** of numbers, which is why `leave 5` is event *6*: the enter event stores
+the position and the leave event returns to it. Numbers are identities, not order — the zone that
+starts earliest in the song can still be zone 5, because numbers are handed out as zones are made.
+The list is sorted by number; the left panel lists the zones in the order a run reaches them.
+
+**Level.** The **vol** slider is the preview's own level: it changes nothing in the file and
+nothing in the export. A hot master is turned down when it loads — the app aims at about -24 dBFS
+RMS and only ever turns material down, never up — and the setting is remembered in the browser, so
+the next song opens at the level you chose.
+
+**Seeking into a zone** plays the main chain, not the zone: the game only enters a zone on an
+event, so there is no honest way for a seek to know how the song got there. Use the zone's
+`zone N` button in the footer to hear it.
+
+**The strip along the top** of the waveform is the time ruler; you can drag there too.
+5. **Play** — or **space** — runs the arrangement from the cursor through the director model.
+   Pressing it again stops, and the cursor stays where it stopped. Seeking into the middle starts on
+   the measure under the cursor, with the first slice clipped to what is left of it, and the value
+   ramp carries on as if the song had been running: the control value
+   ramps 0-127 over the chosen time (13, 17 or 20 s — the three the game uses),
+   every measure end takes a branch, and the event buttons jump: `load` (36),
+   `finish` (10), `fade out` (19), and each zone's enter/leave pair.
+   "demo sequence" fires a zone enter, its leave, the finish and the fade on a
+   timer, so you can hear the whole flow hands-off.
+6. **Export song.json** — the arrangement plus the map it produced; **Export
+   map** — the same map as the text dump that `tools/ssx3_music.py` prints for a
+   shipped song, for comparison.
+
+## What each section is for
+
 The game decides what plays from two things: where the rider is, and how well the run is going.
 The three section types answer those two questions.
 

@@ -55,7 +55,7 @@
   <div id="selbar" hidden>
     <span class="muted">make it</span>
     <button data-type="side" title="plays only while the run is going well — long combos, big air">side material</button>
-    <button data-type="zone" title="a stretch of the run: the game jumps in on entry and back out on exit">course zone</button>
+    <button data-type="zone" title="the course fires N on entering a trigger and N+1 on leaving">course trigger</button>
     <button data-type="finish" title="played once when the run ends, then the song ends">finish</button>
     <button data-type="clear" title="remove every marking in the selection">clear</button>
   </div>
@@ -65,9 +65,9 @@
 
 <main>
   <section>
-    <h2>Course zones</h2>
-    <p class="small">Ride into one during a run and the song jumps to that section; ride out and it
-      goes back to where it was.</p>
+    <h2>Course triggers</h2>
+    <p class="small">The course fires event <em>N</em> when the rider hits a music trigger and
+      <em>N+1</em> on leaving; the song jumps to that section and returns to the bar it left.</p>
     <ul id="zones" class="list"></ul>
     <h2>Finish</h2>
     <p id="finishinfo" class="muted">not set — the song loops for ever</p>
@@ -93,21 +93,40 @@
     <h2>What each section is</h2>
     <dl class="types">
       <dt>side material</dt>
-      <dd>Heard only while the value is high — a long combo, big air, a fast line. It is missing
-        half the time by design, so it must be the part of the song that can vanish: drums, bass, a
-        riff without the hook. <span class="eg">e.g. the drop that starts on a ten-trick combo and
-        cuts the moment you crash.</span></dd>
-      <dt>course zone</dt>
-      <dd>A stretch of the run, not a mood: the game jumps in when the rider enters that area and
-        back out when they leave. Same tempo and key, different instrument or register, four to
-        sixteen bars — a variation, so jumping in and out never sounds like a mistake.
-        <span class="eg">e.g. rail park — sparse drums, no pads; powder bowl — wide and slow, snare
-        out; tunnel — low end and reverb; the big kicker — a rise into the hit; a night street
-        section — brighter, more top end.</span></dd>
+      <dd>The top rung of the value ladder: the game climbs a 0-127 value over 13-20 s and resets it
+        on impacts, and bars marked here are only reachable above 100. They play a third of the time
+        at most, so the track has to survive without them: drums, bass, a riff rather than the hook.
+        <span class="eg">Measured: the ramp and its resets are in the engine code. Which rider events
+        cause a reset is inferred, not measured.</span></dd>
+      <dt>course trigger</dt>
+      <dd>The course fires event <em>N</em> on entering one of its music triggers and <em>N+1</em> on
+        leaving; the song stores the bar it was on and returns to it. Same tempo and key, a different
+        instrument or register, four to sixteen bars — a variation, so a switch in and out does not
+        sound like a mistake. <span class="eg">Measured: the N / N+1 behaviour and the store-return
+        actions. What the game counts as a trigger is not measured, and this page will not guess at
+        it.</span></dd>
       <dt>finish</dt>
-      <dd>Played once when the run ends, then the song ends: the resolve, not another loop.
-        <span class="eg">e.g. the landing after the last jump, with the track winding down instead
-        of cutting.</span></dd>
+      <dd>Event 10 at the line: the ending bars play once and the song stops. Measured, both in the
+        map and in a race trace.</dd>
+    </dl>
+
+    <h2>Moments</h2>
+    <p class="small">What a song can answer, and what is still unmeasured. A moment with no measured
+      signal cannot be cued — see <code>docs/moments.md</code>.</p>
+    <dl class="types" id="moments">
+      <dt>start</dt>
+      <dd>event 0 — measured. A cue here is a pickup into the groove.</dd>
+      <dt>flow, low value</dt>
+      <dd>value 0-50 — measured. The thin rung of the ladder.</dd>
+      <dt>flow, high value</dt>
+      <dd>value 100-127 — measured. The full rung.</dd>
+      <dt>impact</dt>
+      <dd>a value reset, strength class 0.25 / 0.65 — in the code; which rider events cause it is
+        inferred. A cue here is a hit that re-lands the groove.</dd>
+      <dt>airborne</dt>
+      <dd>no signal measured yet. Nothing can be cued on it until a trace says what fires.</dd>
+      <dt>finish</dt>
+      <dd>event 10 — measured. A stab and a tail.</dd>
     </dl>
 
     <h2>Check</h2>
